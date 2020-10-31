@@ -57,6 +57,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   // add a rgb camera image publisher
   image_transport::ImageTransport it(nh_);
   image_pub = it.advertise("camera/image", 1);
+  depth_image_pub = it.advertise("camera/depth", 1);
 }
 
 FlightPilot::~FlightPilot() {}
@@ -85,17 +86,26 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
     unity_bridge_ptr_->handleOutput();
   }
     cv::Mat image;
+    cv::Mat depth_image;
     cv_bridge::CvImagePtr cv_ptr;
 
     std::vector<std::shared_ptr<RGBCamera>> rgb_cameras = quad_ptr_->getCameras();
     auto cam = rgb_cameras[0];
     bool success = cam->getRGBImage(image);
     if (!success) {
-        ROS_INFO("unable to publish image because no image");
+        ROS_INFO("unable to publish image because no rgb image");
         return;
-    } 
+    }
     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
     image_pub.publish(msg);
+
+    success = cam->getDepthMap(depth_image);
+    if (!success) {
+        ROS_INFO("unable to publish depth image!");
+        return;
+    }
+    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", depth_image).toImageMsg();
+    depth_image_pub.publish(depth_msg);
 }
 
 bool FlightPilot::setUnity(const bool render) {

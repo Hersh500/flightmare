@@ -47,6 +47,7 @@ class FlightPilot {
 
   // publisher
   image_transport::Publisher image_pub;
+  image_transport::Publisher depth_image_pub;
 
   // subscriber
   ros::Subscriber sub_state_est_;
