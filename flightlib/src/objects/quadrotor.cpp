@@ -249,7 +249,7 @@ std::vector<std::shared_ptr<RGBCamera>> Quadrotor::getCameras(void) const {
 
 bool Quadrotor::getCamera(const size_t cam_id,
                           std::shared_ptr<RGBCamera> camera) const {
-  if (cam_id <= rgb_cameras_.size()) {
+  if (cam_id >= rgb_cameras_.size()) {
     return false;
   }
 

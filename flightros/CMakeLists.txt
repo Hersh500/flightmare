@@ -2,7 +2,10 @@ project(flightros)
 
 cmake_minimum_required(VERSION 3.0.0)
 
-find_package(catkin_simple REQUIRED)
+find_package(catkin_simple REQUIRED COMPONENTS
+    image_transport
+    cv_bridge
+)
 
 find_package(OpenCV REQUIRED)
 

@@ -91,6 +91,7 @@ struct Object_t {
 struct SettingsMessage_t {
   // scene/render settings
   size_t scene_id = UnityScene::WAREHOUSE;
+  // size_t scene_id = UnityScene::TUNELS;
 
   //
   std::vector<Vehicle_t> vehicles;

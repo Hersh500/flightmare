@@ -8,7 +8,7 @@ RGBCamera::RGBCamera()
     height_(480),
     fov_{70.0},
     depth_scale_{0.2},
-    enabled_layers_({false, false, false}) {}
+    enabled_layers_({true, true, true}) {}
 
 RGBCamera::~RGBCamera() {}
 

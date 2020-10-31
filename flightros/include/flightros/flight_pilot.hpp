@@ -6,6 +6,8 @@
 // ros
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
 
 // rpg quadrotor
 #include <autopilot/autopilot_helper.h>
@@ -44,6 +46,7 @@ class FlightPilot {
   ros::NodeHandle pnh_;
 
   // publisher
+  image_transport::Publisher image_pub;
 
   // subscriber
   ros::Subscriber sub_state_est_;
@@ -63,6 +66,7 @@ class FlightPilot {
   bool unity_render_{false};
   RenderMessage_t unity_output_;
   uint16_t receive_id_{0};
+  uint16_t message_num{0};
 
   // auxiliary variables
   Scalar main_loop_freq_{50.0};

@@ -1,4 +1,6 @@
 #include "flightros/flight_pilot.hpp"
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
 
 namespace flightros {
 
@@ -51,6 +53,10 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   // connect unity
   setUnity(unity_render_);
   connectUnity();
+
+  // add a rgb camera image publisher
+  image_transport::ImageTransport it(nh_);
+  image_pub = it.advertise("camera/image", 1);
 }
 
 FlightPilot::~FlightPilot() {}
@@ -73,7 +79,23 @@ void FlightPilot::poseCallback(const nav_msgs::Odometry::ConstPtr &msg) {
 }
 
 void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
-  // empty
+  if (unity_render_ && unity_ready_) {
+    message_num = message_num + 1;
+    unity_bridge_ptr_->getRender(message_num);
+    unity_bridge_ptr_->handleOutput();
+  }
+    cv::Mat image;
+    cv_bridge::CvImagePtr cv_ptr;
+
+    std::vector<std::shared_ptr<RGBCamera>> rgb_cameras = quad_ptr_->getCameras();
+    auto cam = rgb_cameras[0];
+    bool success = cam->getRGBImage(image);
+    if (!success) {
+        ROS_INFO("unable to publish image because no image");
+        return;
+    } 
+    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+    image_pub.publish(msg);
 }
 
 bool FlightPilot::setUnity(const bool render) {

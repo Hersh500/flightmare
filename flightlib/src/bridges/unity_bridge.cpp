@@ -136,7 +136,7 @@ bool UnityBridge::setScene(const SceneID& scene_id) {
     logger_.warn("Scene ID is not defined, cannot set scene.");
     return false;
   }
-  // logger_.info("Scene ID is set to %d.", scene_id);
+  logger_.info("Scene ID is set to %d.", scene_id);
   settings_.scene_id = scene_id;
   return true;
 }
@@ -234,7 +234,7 @@ bool UnityBridge::handleOutput() {
 
         // Tell OpenCv that the input is RGB.
         if (cam.channels == 3) {
-          cv::cvtColor(new_image, new_image, CV_RGB2BGR);
+          cv::cvtColor(new_image, new_image, cv::COLOR_RGB2BGR);
         }
         unity_quadrotors_[idx]->getCameras()[cam.output_index]->feedImageQueue(
           layer_idx, new_image);
