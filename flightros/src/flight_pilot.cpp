@@ -32,6 +32,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   rgb_camera_->setWidth(720);
   rgb_camera_->setHeight(480);
   rgb_camera_->setRelPose(B_r_BC, R_BC);
+  rgb_camera_->enableDepth(true);
   quad_ptr_->addRGBCamera(rgb_camera_);
 
   // initialization
@@ -104,7 +105,7 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
         ROS_INFO("unable to publish depth image!");
         return;
     }
-    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", depth_image).toImageMsg();
+    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depth_image).toImageMsg();
     depth_image_pub.publish(depth_msg);
 }
 
