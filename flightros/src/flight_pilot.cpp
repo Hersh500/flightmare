@@ -25,7 +25,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 
   // add mono camera
   rgb_camera_ = std::make_shared<RGBCamera>();
-  Vector<3> B_r_BC(0.0, 0.0, 0.3);
+  Vector<3> B_r_BC(0.0, 0.1, 0.6);
   Matrix<3, 3> R_BC = Quaternion(1.0, 0.0, 0.0, 0.0).toRotationMatrix();
   std::cout << R_BC << std::endl;
   rgb_camera_->setFOV(90);
