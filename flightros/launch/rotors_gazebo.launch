@@ -117,6 +117,14 @@
         args="-s rqt_quad_gui.basic_flight.BasicFlight --args 
         --quad_name $(arg quad_name)" output="screen"/>
 
+
   </group> 
+
+  <!-- Octomap stuff -->
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+     <param name="frame_id" type="string" value="world"/>
+     <param name="max_sensor_range" value="7.0"/>
+     <remap from="cloud_in" to="hummingbird/point_cloud"/>
+  </node>
 
 </launch>
