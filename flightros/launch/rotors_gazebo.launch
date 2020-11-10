@@ -8,7 +8,7 @@
 
   <arg name="use_unity_editor" default="false" />
   <arg name="paused" value="true"/>
-  <arg name="gui" value="true"/>
+  <arg name="gui" value="false"/>
   <arg name="use_mpc" default="false"/>
   <arg name="use_ground_truth" default="true"/>
   <arg name="enable_ground_truth" default="true"/>

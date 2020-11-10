@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <memory>
@@ -8,6 +7,14 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
+#include <tf/transform_broadcaster.h>
+#include <tf_conversions/tf_eigen.h>
+#include <Eigen/Dense>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 // rpg quadrotor
 #include <autopilot/autopilot_helper.h>
@@ -35,6 +42,7 @@ class FlightPilot {
   // callbacks
   void mainLoopCallback(const ros::TimerEvent& event);
   void poseCallback(const nav_msgs::Odometry::ConstPtr& msg);
+  void publishPointCloud(cv_bridge::CvImageConstPtr depth_img);
 
   bool setUnity(const bool render);
   bool connectUnity(void);
@@ -48,9 +56,13 @@ class FlightPilot {
   // publisher
   image_transport::Publisher image_pub;
   image_transport::Publisher depth_image_pub;
+  ros::Publisher cloud_pub;
+
+  tf::TransformBroadcaster br;
 
   // subscriber
   ros::Subscriber sub_state_est_;
+
 
   // main loop timer
   ros::Timer timer_main_loop_;

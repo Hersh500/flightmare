@@ -5,9 +5,13 @@ cmake_minimum_required(VERSION 3.0.0)
 find_package(catkin_simple REQUIRED COMPONENTS
     image_transport
     cv_bridge
+    sensor_msgs
+    tf_conversions
+    tf
 )
 
 find_package(OpenCV REQUIRED)
+# find_package( PCL REQUIRED)
 
 catkin_simple()
 
@@ -38,6 +42,12 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -g")
 cs_add_library(flight_pilot
     src/flight_pilot.cpp
 )
+
+# PCL Stuff
+# include_directories(${PCL_INCLUDE_DIRS} )
+# link_directories(${PCL_LIBRARY_DIRS})
+# add_definitions(${PCL_DEFINITIONS})
+
 
 target_link_libraries(flight_pilot
   ${catkin_LIBRARIES}

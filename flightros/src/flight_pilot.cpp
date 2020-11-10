@@ -1,6 +1,11 @@
 #include "flightros/flight_pilot.hpp"
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 namespace flightros {
 
@@ -29,8 +34,8 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   Matrix<3, 3> R_BC = Quaternion(1.0, 0.0, 0.0, 0.0).toRotationMatrix();
   std::cout << R_BC << std::endl;
   rgb_camera_->setFOV(90);
-  rgb_camera_->setWidth(720);
-  rgb_camera_->setHeight(480);
+  rgb_camera_->setWidth(360);
+  rgb_camera_->setHeight(240);
   rgb_camera_->setRelPose(B_r_BC, R_BC);
   rgb_camera_->enableDepth(true);
   quad_ptr_->addRGBCamera(rgb_camera_);
@@ -59,25 +64,33 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   image_transport::ImageTransport it(nh_);
   image_pub = it.advertise("camera/image", 1);
   depth_image_pub = it.advertise("camera/depth", 1);
+  cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
 }
 
 FlightPilot::~FlightPilot() {}
 
 void FlightPilot::poseCallback(const nav_msgs::Odometry::ConstPtr &msg) {
-  quad_state_.x[QS::POSX] = (Scalar)msg->pose.pose.position.x;
-  quad_state_.x[QS::POSY] = (Scalar)msg->pose.pose.position.y;
-  quad_state_.x[QS::POSZ] = (Scalar)msg->pose.pose.position.z;
-  quad_state_.x[QS::ATTW] = (Scalar)msg->pose.pose.orientation.w;
-  quad_state_.x[QS::ATTX] = (Scalar)msg->pose.pose.orientation.x;
-  quad_state_.x[QS::ATTY] = (Scalar)msg->pose.pose.orientation.y;
-  quad_state_.x[QS::ATTZ] = (Scalar)msg->pose.pose.orientation.z;
-  //
-  quad_ptr_->setState(quad_state_);
+    quad_state_.x[QS::POSX] = (Scalar)msg->pose.pose.position.x;
+    quad_state_.x[QS::POSY] = (Scalar)msg->pose.pose.position.y;
+    quad_state_.x[QS::POSZ] = (Scalar)msg->pose.pose.position.z;
+    quad_state_.x[QS::ATTW] = (Scalar)msg->pose.pose.orientation.w;
+    quad_state_.x[QS::ATTX] = (Scalar)msg->pose.pose.orientation.x;
+    quad_state_.x[QS::ATTY] = (Scalar)msg->pose.pose.orientation.y;
+    quad_state_.x[QS::ATTZ] = (Scalar)msg->pose.pose.orientation.z;
 
-  if (unity_render_ && unity_ready_) {
-    unity_bridge_ptr_->getRender(0);
-    unity_bridge_ptr_->handleOutput();
-  }
+    quad_ptr_->setState(quad_state_);
+
+    if (unity_render_ && unity_ready_) {
+        unity_bridge_ptr_->getRender(0);
+        unity_bridge_ptr_->handleOutput();
+    }
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(0.0, 0.1, 0.6));
+    tf::Quaternion q;
+    Eigen::Quaternion eigen_q = Eigen::Quaterniond(1.0, 0.0, 0.0, 0.0);
+    tf::quaternionEigenToTF(eigen_q, q);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "hummingbird/base_link", "camera_pose"));
 }
 
 void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
@@ -97,7 +110,7 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
         ROS_INFO("unable to publish image because no rgb image");
         return;
     }
-    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+    sensor_msgs::ImageConstPtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
     image_pub.publish(msg);
 
     success = cam->getDepthMap(depth_image);
@@ -105,8 +118,13 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
         ROS_INFO("unable to publish depth image!");
         return;
     }
-    sensor_msgs::ImagePtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depth_image).toImageMsg();
+    cv::Mat depth_conv;
+    cv::cvtColor(depth_image,depth_conv,CV_BGR2GRAY);
+
+    sensor_msgs::ImageConstPtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", depth_conv).toImageMsg();
+    cv_bridge::CvImageConstPtr depth_img_msg = cv_bridge::toCvShare(depth_msg, sensor_msgs::image_encodings::MONO8);
     depth_image_pub.publish(depth_msg);
+    publishPointCloud(depth_img_msg);
 }
 
 bool FlightPilot::setUnity(const bool render) {
@@ -132,6 +150,76 @@ bool FlightPilot::loadParams(void) {
   quadrotor_common::getParam("unity_render", unity_render_, pnh_);
 
   return true;
+}
+
+void FlightPilot::publishPointCloud(cv_bridge::CvImageConstPtr depth_img) {
+
+    std::vector<float> points;
+    //hardcoded right now, need to change this later
+    float depth_scale = 0.2;
+    float FOV = 90.0;
+    float fl = (240/2.0)/tan((M_PI * FOV/180.0)/2.0);
+    Eigen::Matrix3f K;
+    // the y of the image frame is not aligned with the y of the world axis...
+    // in the image frame, y is up, while in the world frame, z is up...
+    // currently have just switched the axes here, but there should be a consistent way to keep track, maybe through tf?
+
+    K(0, 0) = fl;
+    K(0, 1) = 0;
+    K(0, 2) = 360.0/2;
+    K(1, 0) = 0;
+    K(1, 1) = fl;
+    K(1, 2) = 240.0/2;
+    K(2, 0) = 0;
+    K(2, 1) = 0;
+    K(2, 2) = 1;
+
+    Eigen::Matrix3f invK = K.inverse();
+
+    for (int i = 0; i < depth_img->image.rows; i++) {
+        const uint8_t *row_ptr = depth_img->image.ptr<uint8_t>(i);
+        for (int j = 0; j < depth_img->image.cols; j++) {
+            uint8_t id = row_ptr[j];
+            if (id != 0) {
+                float d = depth_scale * id;
+                Eigen::Vector3f image_point(j * d, i * d, d);
+                Eigen::Vector3f camera_point = invK * image_point;
+                points.push_back(camera_point.x());
+                // switching between z and y here.
+                points.push_back(camera_point.z());
+                points.push_back(camera_point.y());
+            }
+        }
+    }
+    
+    int n_points = points.size();
+    sensor_msgs::PointCloud2 cloud_msg;
+    sensor_msgs::PointCloud2Modifier modifier(cloud_msg);
+
+    modifier.setPointCloud2Fields(3, "x", 1, sensor_msgs::PointField::FLOAT32,
+                                  "y", 1, sensor_msgs::PointField::FLOAT32,
+                                  "z", 1, sensor_msgs::PointField::FLOAT32);
+
+    modifier.setPointCloud2FieldsByString(1, "xyz");
+    modifier.resize(n_points);
+
+    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_msg, "x");
+    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud_msg, "y");
+    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud_msg, "z");
+
+    cloud_msg.height = 1;
+    cloud_msg.width = n_points;
+    cloud_msg.header = std_msgs::Header();
+    cloud_msg.header.frame_id = "camera_pose";
+
+    for(size_t i=0; i<(unsigned long)n_points/3; ++i, ++iter_x, ++iter_y, ++iter_z){
+        *iter_x = points[3*i+0];
+        *iter_y = points[3*i+1];
+        *iter_z = points[3*i+2];
+
+        // std::cerr << *iter_x << " " << *iter_y << " " << *iter_z << std::endl;
+    }
+    cloud_pub.publish(cloud_msg);
 }
 
 }  // namespace flightros
