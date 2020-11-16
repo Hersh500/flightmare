@@ -42,11 +42,21 @@ class FlightPilot {
   // callbacks
   void mainLoopCallback(const ros::TimerEvent& event);
   void poseCallback(const nav_msgs::Odometry::ConstPtr& msg);
-  void publishPointCloud(cv_bridge::CvImageConstPtr depth_img);
+  // void publishPointCloud(cv_bridge::CvImageConstPtr depth_img);
 
   bool setUnity(const bool render);
   bool connectUnity(void);
   bool loadParams(void);
+  float x_t = 0.0;
+  float y_t = 0.1;
+  float z_t = 0.6;
+  Quaternion R_BC_quat = Quaternion(1.0, 0.0, 0.0, 0.0);
+
+  // External variables for the depth converter
+  static const int fov = 90;
+  static const int im_width = 256;
+  static const int im_height = 256;
+  static const int depth_scale = 5;  // need to divide this by 10
 
  private:
   // ros nodes
@@ -56,7 +66,7 @@ class FlightPilot {
   // publisher
   image_transport::Publisher image_pub;
   image_transport::Publisher depth_image_pub;
-  ros::Publisher cloud_pub;
+  // ros::Publisher cloud_pub;
 
   tf::TransformBroadcaster br;
 

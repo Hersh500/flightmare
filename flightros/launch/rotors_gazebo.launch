@@ -104,6 +104,10 @@
       <remap from="flight_pilot/state_estimate" to="ground_truth/odometry" />
     </node>
 
+    <node pkg="flightros" type="depth_converter_node" name="depth_converter_node" output="screen">
+      <remap from="flight_pilot/depth" to="camera/depth" />
+    </node>
+
     <node pkg="joy" type="joy_node" name="joy_node">
       <param name="autorepeat_rate" value="10"/>
     </node>

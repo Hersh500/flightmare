@@ -1,4 +1,5 @@
 #include "flightros/flight_pilot.hpp"
+
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -30,15 +31,15 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 
   // add mono camera
   rgb_camera_ = std::make_shared<RGBCamera>();
-  Vector<3> B_r_BC(0.0, 0.1, 0.6);
-  Matrix<3, 3> R_BC = Quaternion(1.0, 0.0, 0.0, 0.0).toRotationMatrix();
+  Vector<3> B_r_BC(x_t, y_t, z_t);
+  Matrix<3, 3> R_BC = R_BC_quat.toRotationMatrix();
   std::cout << R_BC << std::endl;
-  rgb_camera_->setFOV(90);
-  rgb_camera_->setWidth(360);
-  rgb_camera_->setHeight(240);
+  rgb_camera_->setFOV(fov);
+  rgb_camera_->setWidth(im_width);
+  rgb_camera_->setHeight(im_height);
   rgb_camera_->setRelPose(B_r_BC, R_BC);
   rgb_camera_->enableDepth(true);
-  rgb_camera_->setDepthScale(0.5);
+  rgb_camera_->setDepthScale(depth_scale);
   quad_ptr_->addRGBCamera(rgb_camera_);
 
   // initialization
@@ -65,7 +66,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   image_transport::ImageTransport it(nh_);
   image_pub = it.advertise("camera/image", 1);
   depth_image_pub = it.advertise("camera/depth", 1);
-  cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
+  // cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
 }
 
 FlightPilot::~FlightPilot() {}
@@ -125,7 +126,7 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
     sensor_msgs::ImageConstPtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", depth_conv).toImageMsg();
     cv_bridge::CvImageConstPtr depth_img_msg = cv_bridge::toCvShare(depth_msg, sensor_msgs::image_encodings::MONO8);
     depth_image_pub.publish(depth_msg);
-    publishPointCloud(depth_img_msg);
+    // publishPointCloud(depth_img_msg);
 }
 
 bool FlightPilot::setUnity(const bool render) {
@@ -153,6 +154,7 @@ bool FlightPilot::loadParams(void) {
   return true;
 }
 
+/*
 void FlightPilot::publishPointCloud(cv_bridge::CvImageConstPtr depth_img) {
 
     std::vector<float> points;
@@ -187,7 +189,7 @@ void FlightPilot::publishPointCloud(cv_bridge::CvImageConstPtr depth_img) {
                 Eigen::Vector3f camera_point = invK * image_point;
                 points.push_back(camera_point.x());
                 // switching between z and y here.
-                points.push_back(camera_point.z());
+                points.push_back(-camera_point.z());  // need to add a negative here?
                 points.push_back(camera_point.y());
             }
         }
@@ -222,5 +224,6 @@ void FlightPilot::publishPointCloud(cv_bridge::CvImageConstPtr depth_img) {
     }
     cloud_pub.publish(cloud_msg);
 }
+*/
 
 }  // namespace flightros

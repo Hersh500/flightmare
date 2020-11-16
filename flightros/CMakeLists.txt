@@ -43,6 +43,10 @@ cs_add_library(flight_pilot
     src/flight_pilot.cpp
 )
 
+cs_add_library(depth_converter
+    src/depth_converter.cpp
+)
+
 # PCL Stuff
 # include_directories(${PCL_INCLUDE_DIRS} )
 # link_directories(${PCL_LIBRARY_DIRS})
@@ -55,12 +59,28 @@ target_link_libraries(flight_pilot
   stdc++fs
 )
 
+target_link_libraries(depth_converter
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  stdc++fs
+)
+
 cs_add_executable(flight_pilot_node
    src/flight_pilot_node.cpp
 )
 
+cs_add_executable(depth_converter_node
+   src/depth_converter_node.cpp
+)
+
 target_link_libraries(flight_pilot_node
   flight_pilot
+  ${OpenCV_LIBRARIES}
+  stdc++fs
+)
+
+target_link_libraries(depth_converter_node
+  depth_converter 
   ${OpenCV_LIBRARIES}
   stdc++fs
 )
