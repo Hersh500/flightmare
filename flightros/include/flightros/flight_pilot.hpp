@@ -56,7 +56,7 @@ class FlightPilot {
   static const int fov = 90;
   static const int im_width = 256;
   static const int im_height = 256;
-  static const int depth_scale = 5;  // need to divide this by 10
+  static const int depth_scale = 5;
 
  private:
   // ros nodes

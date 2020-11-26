@@ -39,7 +39,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   rgb_camera_->setHeight(im_height);
   rgb_camera_->setRelPose(B_r_BC, R_BC);
   rgb_camera_->enableDepth(true);
-  rgb_camera_->setDepthScale(depth_scale);
+  rgb_camera_->setDepthScale(depth_scale/100.0);
   quad_ptr_->addRGBCamera(rgb_camera_);
 
   // initialization

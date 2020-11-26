@@ -36,18 +36,21 @@ DepthConverter::~DepthConverter() {}
 void DepthConverter::depthCallback(const sensor_msgs::ImageConstPtr& depth_img) {
     cv_bridge::CvImagePtr img = cv_bridge::toCvCopy(depth_img, "mono8");
     std::vector<float> points;
-
-    for (int i = 0; i < img->image.rows; i++) {
-        for (int j = 0; j < img->image.cols; j++) {
+    float width_factor = 0; // -img->image.cols/2;
+    float height_factor = img->image.rows/2;
+    for (int i = 0; i < img->image.rows; i=i + 1) {
+        for (int j = 0; j < img->image.cols; j=j + 1) {
             uint8_t id = img->image.at<uint8_t>(i, j);
             if (id != 0) {
-                float d = FlightPilot::depth_scale/10.0 * id;
-                Eigen::Vector3f image_point(j * d, i * d, d);
-                Eigen::Vector3f camera_point = invK * image_point;
-                points.push_back(camera_point.x());
-                // switching between z and y here.
-                points.push_back(camera_point.z());  // need to add a negative here?
-                points.push_back(-camera_point.y());
+                float d = FlightPilot::depth_scale/100.0 * id;
+                if (d < 20.0) {
+                    Eigen::Vector3f image_point((j + width_factor) * d, (-i + height_factor) * d, d);
+                    Eigen::Vector3f camera_point = invK * image_point;
+                    points.push_back(camera_point.x());
+                    // switching between z and y here, since image rows = world frame z.
+                    points.push_back(camera_point.z());
+                    points.push_back(camera_point.y());
+                }
             }
         }
     }
