@@ -8,10 +8,11 @@ find_package(catkin_simple REQUIRED COMPONENTS
     sensor_msgs
     tf_conversions
     tf
+    octomap
+    octomap_msgs
 )
 
 find_package(OpenCV REQUIRED)
-# find_package( PCL REQUIRED)
 
 catkin_simple()
 
@@ -47,6 +48,10 @@ cs_add_library(depth_converter
     src/depth_converter.cpp
 )
 
+cs_add_library(uncertainty_converter
+    src/uncertainty_converter.cpp
+)
+
 # PCL Stuff
 # include_directories(${PCL_INCLUDE_DIRS} )
 # link_directories(${PCL_LIBRARY_DIRS})
@@ -69,12 +74,22 @@ cs_add_executable(flight_pilot_node
    src/flight_pilot_node.cpp
 )
 
+cs_add_executable(uncertainty_converter_node
+   src/uncertainty_converter_node.cpp
+)
+
 cs_add_executable(depth_converter_node
    src/depth_converter_node.cpp
 )
 
 target_link_libraries(flight_pilot_node
   flight_pilot
+  ${OpenCV_LIBRARIES}
+  stdc++fs
+)
+
+target_link_libraries(uncertainty_converter_node
+  uncertainty_converter 
   ${OpenCV_LIBRARIES}
   stdc++fs
 )

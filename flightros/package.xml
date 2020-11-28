@@ -12,6 +12,8 @@
   <buildtool_depend>catkin_simple</buildtool_depend>
 
   <depend>flightlib</depend>
+  <depend>octomap</depend>
+  <depend>octomap_msgs</depend>
   <depend>roscpp</depend>
   <depend>autopilot</depend>
   <depend>quadrotor_common</depend>
