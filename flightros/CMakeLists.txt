@@ -2,11 +2,17 @@ cmake_minimum_required(VERSION 3.0.0)
 project(flightros)
 
 # Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
     rospy
     roscpp
+
+    flightlib
+    autopilot
+    quadrotor_common
+    pcl_ros
+
     std_msgs
     nav_msgs
     sensor_msgs
@@ -87,44 +93,34 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -g")
 
 
 
+# PCL Stuff
+include_directories(${PCL_INCLUDE_DIRS} )
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 
 add_library(flight_pilot src/flight_pilot.cpp)
-
 add_library(depth_converter src/depth_converter.cpp)
-
-# PCL Stuff
-# include_directories(${PCL_INCLUDE_DIRS} )
-# link_directories(${PCL_LIBRARY_DIRS})
-# add_definitions(${PCL_DEFINITIONS})
-
 
 target_link_libraries(flight_pilot
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   stdc++fs
 )
-
 target_link_libraries(depth_converter
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   stdc++fs
 )
 
-add_executable(flight_pilot_node
-   src/flight_pilot_node.cpp
-)
-
-add_executable(depth_converter_node
-   src/depth_converter_node.cpp
-)
+add_executable(flight_pilot_node src/flight_pilot_node.cpp)
+add_executable(depth_converter_node src/depth_converter_node.cpp)
 
 target_link_libraries(flight_pilot_node
   flight_pilot
   ${OpenCV_LIBRARIES}
   stdc++fs
 )
-
 target_link_libraries(depth_converter_node
   depth_converter 
   ${OpenCV_LIBRARIES}
