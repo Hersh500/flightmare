@@ -25,7 +25,7 @@ find_package(OpenCV REQUIRED)
 # catkin_simple()
 
 # Declare the service files to be built
-add_service_files(DIRECTORY srv FILES QuadState.srv)
+add_service_files(FILES QuadState.srv)
 
 # These also go here:
 # add_message_files()
@@ -39,6 +39,10 @@ catkin_package(
   LIBRARIES flight_pilot depth_converter
 )
 
+include_directories(
+include
+  ${catkin_INCLUDE_DIRS}
+)
 
 
 
@@ -85,13 +89,9 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -g")
 
 
 
-add_library(flight_pilot
-    src/flight_pilot.cpp
-)
+add_library(flight_pilot src/flight_pilot.cpp)
 
-add_library(depth_converter
-    src/depth_converter.cpp
-)
+add_library(depth_converter src/depth_converter.cpp)
 
 # PCL Stuff
 # include_directories(${PCL_INCLUDE_DIRS} )

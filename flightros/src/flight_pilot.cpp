@@ -1,4 +1,4 @@
-#include "include/flightros/flight_pilot.hpp"
+#include "flightros/flight_pilot.hpp"
 
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
