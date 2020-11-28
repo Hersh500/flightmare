@@ -5,6 +5,7 @@
 #include <std_msgs/Float32.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <flightros/QuadState.h>
 
 class PropNavMission{
 

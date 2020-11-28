@@ -1,0 +1,9 @@
+#QuadState.srv
+string in_
+---
+std_msgs/Header header
+std_msgs/bool done
+std_msgs/bool crash
+sensor_msgs/Image image
+geometry_msgs/Point current_position
+geometry_msgs/Point goal_position

@@ -1,19 +1,40 @@
+cmake_minimum_required(VERSION 3.0.0)
 project(flightros)
 
-cmake_minimum_required(VERSION 3.0.0)
-
 find_package(catkin_simple REQUIRED COMPONENTS
+    rospy
+    roscpp
     image_transport
     cv_bridge
     sensor_msgs
     tf_conversions
     tf
+    std_msgs
+    nav_msgs
+    sensor_msgs
+    geometry_msgs
+    message_generation
 )
 
 find_package(OpenCV REQUIRED)
 # find_package( PCL REQUIRED)
 
 catkin_simple()
+
+# Declare the service files to be built
+add_service_files(FILES
+  QuadState.srv
+)
+
+# These also go here:
+# add_message_files()
+# add_action_files()
+
+generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
+
+catkin_package(
+  CATKIN_DEPENDS message_runtime std_msgs sensor_msgs geometry_msgs
+)
 
 # Setup Default Build Type as Release
 if (NOT CMAKE_BUILD_TYPE)
@@ -45,6 +66,11 @@ cs_add_library(flight_pilot
 
 cs_add_library(depth_converter
     src/depth_converter.cpp
+)
+
+add_executable(navigator_node src/navigator.cpp)
+target_link_libraries(navigator_node
+  ${catkin_LIBRARIES}
 )
 
 # PCL Stuff

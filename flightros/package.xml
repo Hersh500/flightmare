@@ -22,4 +22,8 @@
   <depend>tf_conversions</depend>
   <depend>pcl_ros</depend>
 
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
 </package>

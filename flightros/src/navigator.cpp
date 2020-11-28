@@ -94,3 +94,14 @@ void Navigator::run(){
     }
 
 }
+
+int main(int argc, char** argv){
+
+    ros::init(argc, argv, "navigator");
+    ros::NodeHandle nh;
+    Navigator Navigator_Node(&nh, 30.0);
+    ROS_INFO("Navigator: running");
+    Navigator_Node.run();
+
+    return 0;
+}
