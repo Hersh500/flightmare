@@ -3,10 +3,14 @@
 
 #include <ros/ros.h>
 #include <std_msgs/Float32.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <flightros/QuadState.h>
+#include <sensor_msgs/Image.h>
 
-class PropNavMission{
+class Navigator{
 
     private:
 
@@ -18,33 +22,49 @@ class PropNavMission{
         ros::Subscriber _cmd_heading_sub;
         ros::Subscriber _cmd_velocity_sub;
         ros::Subscriber _odom_sub;
+        ros::Subscriber _camera_sub;
+        ros::Subscriber _depth_sub;
 
         // publishers
         ros::Publisher _cmd_pub;
 
         // services
+        ros::ServiceServer _quadstate_server;
+        // ros::ServiceClient _client;
+        // flightros::QuadState _quadstate_srv;
+
+        // service callback functions
+        bool _quadstate_cb(flightros::QuadState::Request  &req,
+                           flightros::QuadState::Response &res);
 
         // initialization functions
         void initializeSubscribers();
         void initializePublishers();
         void initializeServices();
 
-        // callback functions
-        void _cmd_heading_sub(const std_msgs::Float32::ConstPtr& msg);
-        void _cmd_velocity_sub(const std_msgs::Float32::ConstPtr& msg);
+        // subscriber callback functions
+        void _cmd_heading_cb(const std_msgs::Float32::ConstPtr& msg);
+        void _cmd_velocity_cb(const std_msgs::Float32::ConstPtr& msg);
         double _cmd_heading, _cmd_velocity;
-        void odom_cb(const nav_msgs::Odometry::ConstPtr& msg);
+        void _odom_cb(const nav_msgs::Odometry::ConstPtr& msg);
         nav_msgs::Odometry _odom;
+        void _camera_cb(const sensor_msgs::Image::ConstPtr& msg);
+        void _depth_cb(const sensor_msgs::Image::ConstPtr& msg);
+        sensor_msgs::Image _rgb, _depth;
 
         // timing variables
         ros::Time _last_cmd;
 
+        // other variables
+        geometry_msgs::Point _curr_pos, _goal_pos;
+        geometry_msgs::Quaternion _curr_orient;
+
     public:
 
-        PropNavMission(ros::NodeHandle* nh, double freq);
+        Navigator(ros::NodeHandle* nh, double freq);
 
         void run();
 
-}
+};
 
 #endif
