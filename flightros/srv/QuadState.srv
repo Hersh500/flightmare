@@ -1,4 +1,4 @@
-string in_
+string in
 ---
 std_msgs/Header header
 std_msgs/Bool done

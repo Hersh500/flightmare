@@ -4,8 +4,13 @@
  */
 
 #include <flightros/navigator.hpp>
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
+#include <algorithm>
+#include <string>
 
-#define TIME_HORIZON 2.0
+#define TIME_HORIZON 1.0
+#define GOAL_POSITION_Y 20.0
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
                                                          _rate(freq){
@@ -15,10 +20,14 @@ Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh),
     initializeServices();
 
     // command variables
-    _cmd_heading = 0.0
-    _cmd_velocity = 0.0
+    _cmd_heading = 0.0;
+    _cmd_velocity = 0.0;
 
     _last_cmd = ros::Time::now();
+
+    _goal_pos.x = 0.;
+    _goal_pos.x = GOAL_POSITION_Y;
+    _goal_pos.x = 0.;
 
 }
 
@@ -33,6 +42,10 @@ void Navigator::initializeSubscribers(){
         ("learner/cmd_velocity", 10, &Navigator::_cmd_velocity_cb, this);
     _odom_sub = _nh.subscribe
         ("hummingbird/ground_truth/odometry", 10, &Navigator::_odom_cb, this);
+    _camera_sub = _nh.subscribe
+        ("hummingbird/camera/image", 10, &Navigator::_camera_cb, this);
+    _depth_sub = _nh.subscribe
+        ("hummingbird/camera/depth", 10, &Navigator::_depth_cb, this);
 }
 
 void Navigator::initializePublishers(){
@@ -41,16 +54,37 @@ void Navigator::initializePublishers(){
 }
 
 void Navigator::initializeServices(){
-
+    _quadstate_server = _nh.advertiseService("navigator/get_state", &Navigator::_quadstate_cb, this);
+    // _client = _nh.serviceClient<flightros::QuadState>("learner/get_state");
 }
 
 /* ---------------------------------- */
 /*         CALLBACK FUNCTIONS         */
 /* ---------------------------------- */
 
+bool Navigator::_quadstate_cb(flightros::QuadState::Request  &req,
+                   flightros::QuadState::Response &res){
+    std::string str0("0");
+    if (str0.compare(req.in) == 0){
+        // reset simulation
+        // TODO
+        ROS_WARN("QuadState service: Resetting simulation");
+    }
+    else {
+        res.header = _rgb.header;
+        std_msgs::Bool done;
+        done.data = (_curr_pos.y >= _goal_pos.y);
+        res.done = done;
+        res.crash; // TODO
+        res.image = _rgb; // TODO make this CV_32FC4 encoding with depth info
+        res.current_position = _curr_pos;
+        res.goal_position = _goal_pos;
+    }
+}
+
 void Navigator::_cmd_heading_cb(const std_msgs::Float32::ConstPtr& msg){
     if (_cmd_heading > 3.14/4. || _cmd_heading < -3.14/4.)
-        ROS_WARNING("Heading command not within [-PI/4, PI/4]")
+        ROS_WARN("Heading command not within [-PI/4, PI/4]");
     _cmd_heading = msg->data;
 }
 
@@ -58,8 +92,20 @@ void Navigator::_cmd_velocity_cb(const std_msgs::Float32::ConstPtr& msg){
     _cmd_velocity = msg->data;
 }
 
-void Navigator::odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
+void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     _odom = *msg;
+    _curr_pos = _odom.pose.pose.position;
+    _curr_orient = _odom.pose.pose.orientation;
+}
+
+void Navigator::_camera_cb(const sensor_msgs::Image::ConstPtr& msg){
+    _rgb = *msg;
+    _rgb.header.stamp = ros::Time::now();
+}
+
+void Navigator::_depth_cb(const sensor_msgs::Image::ConstPtr& msg){
+    _depth = *msg;
+    _depth.header.stamp = ros::Time::now();
 }
 
 /* ---------------------------------- */
@@ -74,18 +120,33 @@ void Navigator::run(){
         if (ros::Time::now() - _last_cmd < ros::Duration(TIME_HORIZON)){
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
-
-            // TODO vel msg
-            // heading control? could do simple P controller but have to make sure
-            // that the yaw angle from _odom is in base frame
             
-            vel_msg.twist.linear.x = 0
-            vel_msg.twist.linear.y = 0
-            vel_msg.twist.linear.z = 0
-            vel_msg.twist.angular.x = 0
-            vel_msg.twist.angular.y = 0
-            vel_msg.twist.angular.z = 0
-            _cmd_pub.publish(vel_msg)
+            vel_msg.twist.linear.x = 0;
+            vel_msg.twist.linear.y = _cmd_velocity;
+            vel_msg.twist.linear.z = 0;
+
+            Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
+            auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+            double yaw = euler[2]; // map frame yaw angle
+            // assume incoming heading double is from [-PI/4, PI/4]
+            double yaw_change = std::clamp(_cmd_heading, -3.1415927/4., 3.1415927/4.);
+
+            vel_msg.twist.angular.x = 0;
+            vel_msg.twist.angular.y = 0;
+            vel_msg.twist.angular.z = 1.0 * yaw_change;
+            _cmd_pub.publish(vel_msg);
+        }
+        else {
+            // command zero velocity
+            geometry_msgs::TwistStamped vel_msg;
+            vel_msg.header.stamp = ros::Time::now();
+            vel_msg.twist.linear.x = 0;
+            vel_msg.twist.linear.y = 0;
+            vel_msg.twist.linear.z = 0;
+            vel_msg.twist.angular.x = 0;
+            vel_msg.twist.angular.y = 0;
+            vel_msg.twist.angular.z = 0;
+            _cmd_pub.publish(vel_msg);
         }
 
         // spin

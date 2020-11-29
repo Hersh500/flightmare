@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 project(flightros)
 
 # Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+# add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
     rospy
@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
     tf_conversions
     tf
 )
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 find_package(OpenCV REQUIRED)
 # find_package( PCL REQUIRED)
@@ -42,12 +43,15 @@ generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS message_runtime std_msgs sensor_msgs geometry_msgs
+  DEPENDS EIGEN3
+  INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES flight_pilot depth_converter
 )
 
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 
 
