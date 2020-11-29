@@ -69,6 +69,7 @@ class FlightPilot {
   image_transport::Publisher image_pub;
   image_transport::Publisher depth_image_pub;
   ros::Publisher collision_pub;
+  ros::ServiceServer reset_service;
 
   tf::TransformBroadcaster br;
 

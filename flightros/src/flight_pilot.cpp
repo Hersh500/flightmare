@@ -65,6 +65,10 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   image_pub = it.advertise("camera/image", 1);
   depth_image_pub = it.advertise("camera/depth", 1);
   collision_pub = nh_.advertise<std_msgs::Bool>("collision", 1);
+
+
+  // initialize the reset service
+  reset_service = nh_.advertiseService("reset_quad_state", &FlightPilot::resetState);
 }
 
 FlightPilot::~FlightPilot() {}
