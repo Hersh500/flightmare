@@ -4,9 +4,7 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
+#include <std_msgs/Bool.h>
 
 namespace flightros {
 
@@ -66,7 +64,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
   image_transport::ImageTransport it(nh_);
   image_pub = it.advertise("camera/image", 1);
   depth_image_pub = it.advertise("camera/depth", 1);
-  // cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("point_cloud", 1);
+  collision_pub = nh_.advertise<std_msgs::Bool>("collision", 1);
 }
 
 FlightPilot::~FlightPilot() {}
@@ -121,12 +119,33 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
         return;
     }
     cv::Mat depth_conv;
-    cv::cvtColor(depth_image,depth_conv,CV_BGR2GRAY);
+    cv::cvtColor(depth_image, depth_conv, CV_BGR2GRAY);
+
+    double min_depth, max_depth;
+    cv::minMaxLoc(depth_conv, &min_depth, &max_depth);
 
     sensor_msgs::ImageConstPtr depth_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", depth_conv).toImageMsg();
     cv_bridge::CvImageConstPtr depth_img_msg = cv_bridge::toCvShare(depth_msg, sensor_msgs::image_encodings::MONO8);
     depth_image_pub.publish(depth_msg);
-    // publishPointCloud(depth_img_msg);
+    
+    // Publish the current collision state
+    // Seems like the collision flag is broken. 
+    // Instead can use a circular buffer on the minimum depth value in the image for like 5 consecutive images.
+
+    if (min_depth < 30) {
+        num_min_depths_past_threshold++;
+    } else {
+        num_min_depths_past_threshold = 0;
+    }
+
+    std_msgs::Bool collision_msg;
+    if (num_min_depths_past_threshold > 3) {
+        collision_msg.data = true;
+    } else {
+        collision_msg.data = false;
+    }
+
+    collision_pub.publish(collision_msg);
 }
 
 bool FlightPilot::setUnity(const bool render) {

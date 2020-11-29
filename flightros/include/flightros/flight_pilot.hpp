@@ -59,6 +59,8 @@ class FlightPilot {
   static const int depth_scale = 5;
 
  private:
+  int num_min_depths_past_threshold = 0;
+
   // ros nodes
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
@@ -66,7 +68,7 @@ class FlightPilot {
   // publisher
   image_transport::Publisher image_pub;
   image_transport::Publisher depth_image_pub;
-  // ros::Publisher cloud_pub;
+  ros::Publisher collision_pub;
 
   tf::TransformBroadcaster br;
 

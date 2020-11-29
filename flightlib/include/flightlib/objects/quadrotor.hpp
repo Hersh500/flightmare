@@ -59,6 +59,8 @@ class Quadrotor : ObjectBase {
   bool setWorldBox(const Ref<Matrix<3, 2>> box);
   bool constrainInWorldBox(const QuadState& old_state);
 
+  // breaking abstraction here, but w/e
+  bool collision_;
   //
   inline Scalar getMass(void) { return dynamics_.getMass(); };
   inline void setSize(const Ref<Vector<3>> size) { size_ = size; };
@@ -77,7 +79,6 @@ class Quadrotor : ObjectBase {
   // quad state
   QuadState state_;
   Vector<3> size_;
-  bool collision_;
 
   // auxiliar variablers
   Vector<4> motor_omega_;

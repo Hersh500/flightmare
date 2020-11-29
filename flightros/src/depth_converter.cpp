@@ -38,9 +38,13 @@ void DepthConverter::depthCallback(const sensor_msgs::ImageConstPtr& depth_img) 
     std::vector<float> points;
     float width_factor = 0; // -img->image.cols/2;
     float height_factor = img->image.rows/2;
+    uint8_t min_d = 255;
     for (int i = 0; i < img->image.rows; i=i + 1) {
         for (int j = 0; j < img->image.cols; j=j + 1) {
             uint8_t id = img->image.at<uint8_t>(i, j);
+            if (id < min_d) {
+                min_d = id;
+            }
             if (id != 0) {
                 float d = FlightPilot::depth_scale/100.0 * id;
                 if (d < 20.0) {
@@ -54,6 +58,7 @@ void DepthConverter::depthCallback(const sensor_msgs::ImageConstPtr& depth_img) 
             }
         }
     }
+    // ROS_INFO("minimum depth_value = %d\n", min_d);
     
     int n_points = points.size();
     sensor_msgs::PointCloud2 cloud_msg;

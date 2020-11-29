@@ -40,6 +40,7 @@ void UncertaintyConverter::mapCallback(const octomap_msgs::Octomap& msg) {
     // TODO: calculate the correct bounding box given the current robot coords.
     // min_bbox, max_bbox = ...;
 
+    /*
     for(OcTreeTYPE::leaf_bbx_iterator it = tree->begin_leafs_bbx(min,max),
        end=tree->end_leafs_bbx(); it!= end; ++it) {
         //manipulate node, e.g.:
@@ -47,6 +48,7 @@ void UncertaintyConverter::mapCallback(const octomap_msgs::Octomap& msg) {
         std::cout << "Node size: " << it.getSize() << std::endl;
         std::cout << "Node value: " << it->getValue() << std::endl;
     }
+    */
 
 }
 

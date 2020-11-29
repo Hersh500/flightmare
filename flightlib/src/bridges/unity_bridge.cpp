@@ -210,6 +210,7 @@ bool UnityBridge::handleOutput() {
   for (size_t idx = 0; idx < settings_.vehicles.size(); idx++) {
     // update vehicle collision flag
     unity_quadrotors_[idx]->setCollision(sub_msg.sub_vehicles[idx].collision);
+    // printf("collision: %d\n", unity_quadrotors_[idx]->collision_);
 
     // feed image data to RGB camera
     for (const auto& cam : settings_.vehicles[idx].cameras) {

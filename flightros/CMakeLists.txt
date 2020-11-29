@@ -48,9 +48,9 @@ cs_add_library(depth_converter
     src/depth_converter.cpp
 )
 
-cs_add_library(uncertainty_converter
-    src/uncertainty_converter.cpp
-)
+# cs_add_library(uncertainty_converter
+#     src/uncertainty_converter.cpp
+# )
 
 # PCL Stuff
 # include_directories(${PCL_INCLUDE_DIRS} )
@@ -74,9 +74,9 @@ cs_add_executable(flight_pilot_node
    src/flight_pilot_node.cpp
 )
 
-cs_add_executable(uncertainty_converter_node
-   src/uncertainty_converter_node.cpp
-)
+# cs_add_executable(uncertainty_converter_node
+#    src/uncertainty_converter_node.cpp
+# )
 
 cs_add_executable(depth_converter_node
    src/depth_converter_node.cpp
@@ -88,11 +88,11 @@ target_link_libraries(flight_pilot_node
   stdc++fs
 )
 
-target_link_libraries(uncertainty_converter_node
-  uncertainty_converter 
-  ${OpenCV_LIBRARIES}
-  stdc++fs
-)
+# target_link_libraries(uncertainty_converter_node
+#   uncertainty_converter 
+#  ${OpenCV_LIBRARIES}
+#   stdc++fs
+# )
 
 target_link_libraries(depth_converter_node
   depth_converter 
