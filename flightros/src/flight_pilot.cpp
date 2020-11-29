@@ -68,7 +68,7 @@ FlightPilot::FlightPilot(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 
 
   // initialize the reset service
-  reset_service = nh_.advertiseService("reset_quad_state", &FlightPilot::resetState);
+  // reset_service = nh_.advertiseService("reset_quad_state", &FlightPilot::resetState);
 }
 
 FlightPilot::~FlightPilot() {}
