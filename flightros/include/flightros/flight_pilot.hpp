@@ -54,9 +54,9 @@ class FlightPilot {
 
   // External variables for the depth converter
   static const int fov = 90;
-  static const int im_width = 256;
-  static const int im_height = 256;
-  static const int depth_scale = 5;
+  static const int im_width = 128;
+  static const int im_height = 128;
+  static const int depth_scale = 5;  // this gets divided by 100
 
  private:
   int num_min_depths_past_threshold = 0;
