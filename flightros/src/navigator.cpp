@@ -92,8 +92,6 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
-        
-        _in_collision.data = false;
 
         // blocking operation: move drone to reset position
         while ( true ){
@@ -131,6 +129,13 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         // fill relevant fields
         res.header = _rgb.header;
 
+        std_msgs::Bool done;
+        done.data = false;
+        res.done = done;
+        std_msgs::Bool crash_msg;
+        crash_msg.data = false;
+        res.crash = crash_msg;
+
         cv_bridge::CvImagePtr cv_ptr_rgb, cv_ptr_depth;
         try{
             cv_ptr_rgb = cv_bridge::toCvCopy(_rgb, sensor_msgs::image_encodings::BGR8);
@@ -165,6 +170,8 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
         res.current_position = _curr_pos;
         res.goal_position = _goal_pos;
+
+        _in_collision.data = false;
 
     }
 
