@@ -58,6 +58,7 @@ class Navigator{
         // other variables
         geometry_msgs::Point _curr_pos, _goal_pos;
         geometry_msgs::Quaternion _curr_orient;
+        double _yaw;
 
     public:
 

@@ -4,8 +4,8 @@
  */
 
 #include <flightros/navigator.hpp>
-// #include <Eigen/Geometry>
-// #include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
 #include <algorithm>
 #include <string>
 #include <cv_bridge/cv_bridge.h>
@@ -26,6 +26,7 @@
 #define MAX_HEADING 3.14159/4.0 // +/- PI/4 = +/- 45 deg
 #define MAX_VELOCITY 3.0
 #define RUNNING_Z_PGAIN 0.5
+#define YAW_PGAIN 1.0
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
                                                          _rate(freq){
@@ -108,7 +109,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             vel_msg.twist.linear.z = std::clamp( 1.0 * (RESET_POS_Z - _curr_pos.z), -10.0, 10.0 );
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
-            vel_msg.twist.angular.z = 0;
+            vel_msg.twist.angular.z = YAW_PGAIN * (0 - _yaw);
             _cmd_pub.publish(vel_msg);
             // ROS_INFO_STREAM("Resetting drone position");
 
@@ -237,6 +238,9 @@ void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     _odom = *msg;
     _curr_pos = _odom.pose.pose.position;
     _curr_orient = _odom.pose.pose.orientation;
+    Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
+    auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+    _yaw = euler[2]; // map frame yaw angle
 }
 
 void Navigator::_camera_cb(const sensor_msgs::Image::ConstPtr& msg){
@@ -271,15 +275,15 @@ void Navigator::run(){
             vel_msg.twist.linear.y = _cmd_velocity;
             vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);
 
-            // Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
-            // auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-            // double yaw = euler[2]; // map frame yaw angle
             // assume incoming heading double is from [-PI/4, PI/4]
             double yaw_change = std::clamp(_cmd_heading, -MAX_HEADING, MAX_HEADING);
 
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
-            vel_msg.twist.angular.z = 1.0 * yaw_change;
+            if ((_yaw < -MAX_HEADING && yaw_change < 0) || (_yaw > MAX_HEADING && yaw_change > 0))
+                vel_msg.twist.angular.z = 0;
+            else
+                vel_msg.twist.angular.z = YAW_PGAIN * yaw_change;
             _cmd_pub.publish(vel_msg);
         }
         // if not in reset mode and don't have a recent heading/vel command
