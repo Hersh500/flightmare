@@ -135,4 +135,7 @@
      <remap from="cloud_in" to="hummingbird/point_cloud"/>
   </node>
 
+  <!-- Navigator -->
+  <node pkg="flightros" type="navigator_node" name="navigator_node" output="screen"/>
+
 </launch>
