@@ -4,13 +4,27 @@
  */
 
 #include <flightros/navigator.hpp>
-#include <Eigen/Geometry>
-#include <Eigen/Dense>
+// #include <Eigen/Geometry>
+// #include <Eigen/Dense>
 #include <algorithm>
 #include <string>
+#include <cv_bridge/cv_bridge.h>
+#include "opencv2/opencv.hpp"
+#include <vector>
+#include <cmath>
+
+#define RESET_POS_X 62.0
+#define RESET_POS_Y 90.0
+#define RESET_POS_Z 33.0
+#define RESET_REQ_DURATION 2.0
 
 #define TIME_HORIZON 1.0
 #define GOAL_POSITION_Y 20.0
+#define X_THRESHOLD 20.0
+#define Z_THRESHOLD 1.5
+#define MAX_HEADING 3.14159/4.0 // +/- PI/4 = +/- 45 deg
+#define MAX_VELOCITY 3.0
+#define RUNNING_Z_PGAIN 0.5
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
                                                          _rate(freq){
@@ -24,11 +38,13 @@ Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh),
     _cmd_velocity = 0.0;
 
     _last_cmd = ros::Time::now();
+    _not_reset = ros::Time::now();
 
-    _goal_pos.x = 0.;
-    _goal_pos.x = GOAL_POSITION_Y;
-    _goal_pos.x = 0.;
+    _goal_pos.x = RESET_POS_X;
+    _goal_pos.y = RESET_POS_Y + GOAL_POSITION_Y;
+    _goal_pos.z = RESET_POS_Z;
 
+    _in_collision.data = false;
 }
 
 /* ---------------------------------- */
@@ -46,6 +62,8 @@ void Navigator::initializeSubscribers(){
         ("hummingbird/camera/image", 10, &Navigator::_camera_cb, this);
     _depth_sub = _nh.subscribe
         ("hummingbird/camera/depth", 10, &Navigator::_depth_cb, this);
+    _collision_sub = _nh.subscribe
+        ("hummingbird/collision", 10, &Navigator::_collision_cb, this);
 }
 
 void Navigator::initializePublishers(){
@@ -62,34 +80,151 @@ void Navigator::initializeServices(){
 /*         CALLBACK FUNCTIONS         */
 /* ---------------------------------- */
 
-bool Navigator::_quadstate_cb(flightros::QuadState::Request  &req,
+bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
                    flightros::QuadState::Response &res){
+
     std::string str0("0");
+    std::string str1("1");
+
     if (str0.compare(req.in) == 0){
-        // reset simulation
-        // TODO
         ROS_WARN("QuadState service: Resetting simulation");
+        
+        // blocking operation: move drone to reset position
+        while ( true ){
+
+            // check is ROS is shutting down since this callback is blocking
+            if (ros::isShuttingDown()){
+                ros::shutdown();
+            }
+
+            geometry_msgs::TwistStamped vel_msg;
+            vel_msg.header.stamp = ros::Time::now();
+            vel_msg.twist.linear.x = std::clamp( 1.0 * (RESET_POS_X - _curr_pos.x), -10.0, 10.0 );
+            vel_msg.twist.linear.y = std::clamp( 1.0 * (RESET_POS_Y - _curr_pos.y), -10.0, 10.0 );
+            vel_msg.twist.linear.z = std::clamp( 1.0 * (RESET_POS_Z - _curr_pos.z), -10.0, 10.0 );
+            vel_msg.twist.angular.x = 0;
+            vel_msg.twist.angular.y = 0;
+            vel_msg.twist.angular.z = 0;
+            _cmd_pub.publish(vel_msg);
+            // ROS_INFO_STREAM("Resetting drone position");
+
+            if ((std::pow(_curr_pos.x-RESET_POS_X, 2) + std::pow(_curr_pos.y-RESET_POS_Y, 2) + std::pow(_curr_pos.z-RESET_POS_Z, 2)) > 1.0){
+                _not_reset = ros::Time::now();
+            }
+            else if (ros::Time::now() - _not_reset > ros::Duration(RESET_REQ_DURATION)){
+                ROS_INFO_STREAM("Drone is reset");                
+                break;
+            }
+
+            // spin
+            ros::spinOnce();
+            _rate.sleep();
+
+        }
+
+        // fill relevant fields
+        res.header = _rgb.header;
+
+        cv_bridge::CvImagePtr cv_ptr_rgb, cv_ptr_depth;
+        try{
+            cv_ptr_rgb = cv_bridge::toCvCopy(_rgb, sensor_msgs::image_encodings::BGR8);
+            cv_ptr_depth = cv_bridge::toCvCopy(_depth, sensor_msgs::image_encodings::MONO8);
+
+            // split & merge attempt
+            cv::Mat rgb_channels[3];
+            cv::split(cv_ptr_rgb->image, rgb_channels);
+            cv::Mat rgbd_channels[4] = {rgb_channels[0],
+                                        rgb_channels[1],
+                                        rgb_channels[2],
+                                        cv_ptr_depth->image};
+            std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
+            cv::Mat outMat(sizes, CV_32FC4);
+            cv::merge(rgbd_channels, 4, outMat);
+            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            res.image = *rgbd_msg;
+
+            // mixChannels attempt
+            // std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
+            // cv::Mat outMat(sizes, CV_32FC4);
+            // const cv::Mat inMat[] = {cv_ptr_rgb->image, cv_ptr_depth->image};
+            // const int from_to[] = {0,0, 1,1, 2,2, 3,3};
+            // cv::mixChannels(inMat, 2, &outMat, 1, from_to, 4);
+            // sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            // res.image = *rgbd_msg;
+        }
+        catch (cv_bridge::Exception& e){
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            // return;
+        }
+
+        res.current_position = _curr_pos;
+        res.goal_position = _goal_pos;
+
     }
-    else {
+
+    else if (str1.compare(req.in) == 0){
         res.header = _rgb.header;
         std_msgs::Bool done;
         done.data = (_curr_pos.y >= _goal_pos.y);
         res.done = done;
-        res.crash; // TODO
-        res.image = _rgb; // TODO make this CV_32FC4 encoding with depth info
+        // collision || backwards || x too much || z too much
+        std_msgs::Bool crash_msg;
+        crash_msg.data = ( _in_collision.data ||
+                           _curr_pos.y < (RESET_POS_Y - 5.) ||
+                           ( _curr_pos.x > (RESET_POS_X + X_THRESHOLD) || _curr_pos.x < -(RESET_POS_X + X_THRESHOLD)) ||
+                           ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
+        res.crash = crash_msg;
+        
+        cv_bridge::CvImagePtr cv_ptr_rgb, cv_ptr_depth;
+        try{
+            cv_ptr_rgb = cv_bridge::toCvCopy(_rgb, sensor_msgs::image_encodings::BGR8);
+            cv_ptr_depth = cv_bridge::toCvCopy(_depth, sensor_msgs::image_encodings::MONO8);
+
+            // split & merge attempt
+            cv::Mat rgb_channels[3];
+            cv::split(cv_ptr_rgb->image, rgb_channels);
+            cv::Mat rgbd_channels[4] = {rgb_channels[0],
+                                        rgb_channels[1],
+                                        rgb_channels[2],
+                                        cv_ptr_depth->image};
+            std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
+            cv::Mat outMat(sizes, CV_32FC4);
+            cv::merge(rgbd_channels, 4, outMat);
+            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            res.image = *rgbd_msg;
+
+            // mixChannels attempt
+            // std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
+            // cv::Mat outMat(sizes, CV_32FC4);
+            // const cv::Mat inMat[] = {cv_ptr_rgb->image, cv_ptr_depth->image};
+            // const int from_to[] = {0,0, 1,1, 2,2, 3,3};
+            // cv::mixChannels(inMat, 2, &outMat, 1, from_to, 4);
+            // sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            // res.image = *rgbd_msg;
+        }
+        catch (cv_bridge::Exception& e){
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            // return;
+        }
+
         res.current_position = _curr_pos;
         res.goal_position = _goal_pos;
+
+    }
+
+    else {
+        ROS_ERROR("Get State service request value not recognized (0 or 1 supported)!");
     }
 }
 
 void Navigator::_cmd_heading_cb(const std_msgs::Float32::ConstPtr& msg){
-    if (_cmd_heading > 3.14/4. || _cmd_heading < -3.14/4.)
-        ROS_WARN("Heading command not within [-PI/4, PI/4]");
-    _cmd_heading = msg->data;
+    // if (_cmd_heading > 3.14/4. || _cmd_heading < -3.14/4.)
+    //     ROS_WARN("Heading command not within [-PI/4, PI/4]");
+    _cmd_heading = (msg->data) * MAX_HEADING;
 }
 
 void Navigator::_cmd_velocity_cb(const std_msgs::Float32::ConstPtr& msg){
-    _cmd_velocity = msg->data;
+    _cmd_velocity = ((msg->data) + 1)/2. * MAX_VELOCITY;
 }
 
 void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
@@ -108,6 +243,10 @@ void Navigator::_depth_cb(const sensor_msgs::Image::ConstPtr& msg){
     _depth.header.stamp = ros::Time::now();
 }
 
+void Navigator::_collision_cb(const std_msgs::Bool::ConstPtr& msg){
+    _in_collision = *msg;
+}
+
 /* ---------------------------------- */
 /*            RUN FUNCTION            */
 /* ---------------------------------- */
@@ -123,26 +262,27 @@ void Navigator::run(){
             
             vel_msg.twist.linear.x = 0;
             vel_msg.twist.linear.y = _cmd_velocity;
-            vel_msg.twist.linear.z = 0;
+            vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);
 
-            Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
-            auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-            double yaw = euler[2]; // map frame yaw angle
+            // Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
+            // auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+            // double yaw = euler[2]; // map frame yaw angle
             // assume incoming heading double is from [-PI/4, PI/4]
-            double yaw_change = std::clamp(_cmd_heading, -3.1415927/4., 3.1415927/4.);
+            double yaw_change = std::clamp(_cmd_heading, -MAX_HEADING, MAX_HEADING);
 
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
             vel_msg.twist.angular.z = 1.0 * yaw_change;
             _cmd_pub.publish(vel_msg);
         }
+        // if not in reset mode and don't have a recent heading/vel command
         else {
             // command zero velocity
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
             vel_msg.twist.linear.x = 0;
             vel_msg.twist.linear.y = 0;
-            vel_msg.twist.linear.z = 0;
+            vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
             vel_msg.twist.angular.z = 0;
@@ -155,6 +295,10 @@ void Navigator::run(){
     }
 
 }
+
+/* ---------------------------------- */
+/*          INSTANTIATE NODE          */
+/* ---------------------------------- */
 
 int main(int argc, char** argv){
 

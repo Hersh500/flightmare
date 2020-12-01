@@ -24,6 +24,7 @@ class Navigator{
         ros::Subscriber _odom_sub;
         ros::Subscriber _camera_sub;
         ros::Subscriber _depth_sub;
+        ros::Subscriber _collision_sub;
 
         // publishers
         ros::Publisher _cmd_pub;
@@ -51,9 +52,12 @@ class Navigator{
         void _camera_cb(const sensor_msgs::Image::ConstPtr& msg);
         void _depth_cb(const sensor_msgs::Image::ConstPtr& msg);
         sensor_msgs::Image _rgb, _depth;
+        void _collision_cb(const std_msgs::Bool::ConstPtr& msg);
+        std_msgs::Bool _in_collision;
 
         // timing variables
         ros::Time _last_cmd;
+        ros::Time _not_reset;
 
         // other variables
         geometry_msgs::Point _curr_pos, _goal_pos;
