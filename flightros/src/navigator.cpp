@@ -12,13 +12,14 @@
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <cmath>
+#include <iostream>
 
 #define RESET_POS_X 62.0
 #define RESET_POS_Y 90.0
 #define RESET_POS_Z 33.0
 #define RESET_REQ_DURATION 2.0
 
-#define TIME_HORIZON 1.0
+#define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
 #define X_THRESHOLD 20.0
 #define Z_THRESHOLD 1.5
@@ -83,10 +84,17 @@ void Navigator::initializeServices(){
 bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
                    flightros::QuadState::Response &res){
 
-    std::string str0("0");
-    std::string str1("1");
 
-    if (str0.compare(req.in) == 0){
+
+    std::size_t index = req.in.substr(2).find(" ");
+    std::string::size_type sz;
+    _cmd_heading = std::stof(req.in.substr(2),&sz);
+    _cmd_velocity = std::stof(req.in.substr(2).substr(sz));
+
+    ROS_INFO_STREAM(_cmd_heading);
+    ROS_INFO_STREAM(_cmd_velocity);
+
+    if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
         
         // blocking operation: move drone to reset position
@@ -162,7 +170,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
     }
 
-    else if (str1.compare(req.in) == 0){
+    else if (req.in[0] == '1'){
         res.header = _rgb.header;
         std_msgs::Bool done;
         done.data = (_curr_pos.y >= _goal_pos.y);
