@@ -144,7 +144,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
             cv::Mat outMat(sizes, CV_32FC4);
             cv::merge(rgbd_channels, 4, outMat);
-            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "8UC4", outMat).toImageMsg();
             res.image = *rgbd_msg;
 
             // mixChannels attempt
@@ -195,7 +195,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
             cv::Mat outMat(sizes, CV_32FC4);
             cv::merge(rgbd_channels, 4, outMat);
-            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "32FC4", outMat).toImageMsg();
+            sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "8UC4", outMat).toImageMsg();
             res.image = *rgbd_msg;
 
             // mixChannels attempt
