@@ -53,10 +53,6 @@ Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh),
 /* ---------------------------------- */
 
 void Navigator::initializeSubscribers(){
-    _cmd_heading_sub = _nh.subscribe
-        ("learner/cmd_heading", 10, &Navigator::_cmd_heading_cb, this);
-    _cmd_velocity_sub = _nh.subscribe
-        ("learner/cmd_velocity", 10, &Navigator::_cmd_velocity_cb, this);
     _odom_sub = _nh.subscribe
         ("hummingbird/ground_truth/odometry", 10, &Navigator::_odom_cb, this);
     _camera_sub = _nh.subscribe
@@ -86,13 +82,12 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
 
 
-    std::size_t index = req.in.substr(2).find(" ");
     std::string::size_type sz;
-    _cmd_heading = std::stof(req.in.substr(2),&sz);
-    _cmd_velocity = std::stof(req.in.substr(2).substr(sz));
+    _cmd_heading = std::stof(req.in.substr(2),&sz) * MAX_HEADING;
+    _cmd_velocity = (std::stof(req.in.substr(2).substr(sz)) + 1.)/2. * MAX_VELOCITY;
 
-    ROS_INFO_STREAM(_cmd_heading);
-    ROS_INFO_STREAM(_cmd_velocity);
+    // ROS_INFO_STREAM(_cmd_heading);
+    // ROS_INFO_STREAM(_cmd_velocity);
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
@@ -223,16 +218,6 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     else {
         ROS_ERROR("Get State service request value not recognized (0 or 1 supported)!");
     }
-}
-
-void Navigator::_cmd_heading_cb(const std_msgs::Float32::ConstPtr& msg){
-    // if (_cmd_heading > 3.14/4. || _cmd_heading < -3.14/4.)
-    //     ROS_WARN("Heading command not within [-PI/4, PI/4]");
-    _cmd_heading = (msg->data) * MAX_HEADING;
-}
-
-void Navigator::_cmd_velocity_cb(const std_msgs::Float32::ConstPtr& msg){
-    _cmd_velocity = ((msg->data) + 1)/2. * MAX_VELOCITY;
 }
 
 void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
