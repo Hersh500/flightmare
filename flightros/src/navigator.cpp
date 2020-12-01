@@ -12,6 +12,7 @@
 #include "opencv2/opencv.hpp"
 #include <vector>
 #include <cmath>
+#include <ctgmath>
 #include <iostream>
 
 #define RESET_POS_X 62.0
@@ -271,13 +272,12 @@ void Navigator::run(){
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
             
-            vel_msg.twist.linear.x = 0;
-            vel_msg.twist.linear.y = _cmd_velocity;
+            vel_msg.twist.linear.x = _cmd_velocity * (-sin(_yaw));
+            vel_msg.twist.linear.y = _cmd_velocity * cos(_yaw);
             vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);
 
             // assume incoming heading double is from [-PI/4, PI/4]
             double yaw_change = std::clamp(_cmd_heading, -MAX_HEADING, MAX_HEADING);
-
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
             if ((_yaw < -MAX_HEADING && yaw_change < 0) || (_yaw > MAX_HEADING && yaw_change > 0))
@@ -286,6 +286,7 @@ void Navigator::run(){
                 vel_msg.twist.angular.z = YAW_PGAIN * yaw_change;
             _cmd_pub.publish(vel_msg);
         }
+
         // if not in reset mode and don't have a recent heading/vel command
         else {
             // command zero velocity
