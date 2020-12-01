@@ -15,19 +15,28 @@
 #include <ctgmath>
 #include <iostream>
 
+/* Resets for Forest
 #define RESET_POS_X 62.0
 #define RESET_POS_Y 90.0
 #define RESET_POS_Z 33.0
+*/
+
+/* Resets for Warehouse box */
+#define RESET_POS_X -8.0
+#define RESET_POS_Y 15.0
+#define RESET_POS_Z 2.0
+
 #define RESET_REQ_DURATION 2.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
 #define X_THRESHOLD 20.0
 #define Z_THRESHOLD 1.5
-#define MAX_HEADING 3.14159/4.0 // +/- PI/4 = +/- 45 deg
+#define PI 3.14159
+#define MAX_HEADING PI/4.0 // +/- PI/4 = +/- 45 deg
 #define MAX_VELOCITY 3.0
 #define RUNNING_Z_PGAIN 0.5
-#define YAW_PGAIN 1.0
+#define YAW_PGAIN 0.1
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
                                                          _rate(freq){
@@ -153,6 +162,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
             cv::Mat outMat(sizes, CV_32FC4);
             cv::merge(rgbd_channels, 4, outMat);
+            // outMat = outMat * (1.0f/255.0f);
             sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "8UC4", outMat).toImageMsg();
             res.image = *rgbd_msg;
 
@@ -242,6 +252,13 @@ void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
     auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
     _yaw = euler[2]; // map frame yaw angle
+    // saturation to prevent ambiguity
+    if (_yaw < -MAX_HEADING) {
+        _yaw += PI;
+    }
+    if (_yaw > MAX_HEADING) {
+        _yaw -= PI;
+    }
 }
 
 void Navigator::_camera_cb(const sensor_msgs::Image::ConstPtr& msg){
@@ -272,6 +289,9 @@ void Navigator::run(){
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
             
+            ROS_INFO("cmd_velocity is %f\n", _cmd_velocity);
+            ROS_INFO("cur_heading is %f\n", _yaw);
+            ROS_INFO("-------------------");
             vel_msg.twist.linear.x = _cmd_velocity * (-sin(_yaw));
             vel_msg.twist.linear.y = _cmd_velocity * cos(_yaw);
             vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);
