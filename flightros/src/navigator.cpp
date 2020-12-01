@@ -85,6 +85,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     std::string::size_type sz;
     _cmd_heading = std::stof(req.in.substr(2),&sz) * MAX_HEADING;
     _cmd_velocity = (std::stof(req.in.substr(2).substr(sz)) + 1.)/2. * MAX_VELOCITY;
+    _last_cmd = ros::Time::now();
 
     // ROS_INFO_STREAM(_cmd_heading);
     // ROS_INFO_STREAM(_cmd_velocity);
@@ -190,6 +191,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
                                         rgb_channels[1],
                                         rgb_channels[2],
                                         cv_ptr_depth->image};
+
             std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
             cv::Mat outMat(sizes, CV_32FC4);
             cv::merge(rgbd_channels, 4, outMat);
@@ -218,6 +220,8 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     else {
         ROS_ERROR("Get State service request value not recognized (0 or 1 supported)!");
     }
+
+    return true;
 }
 
 void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
