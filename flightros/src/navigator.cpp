@@ -15,16 +15,16 @@
 #include <ctgmath>
 #include <iostream>
 
-/* Resets for Forest
+/* Resets for Forest */
 #define RESET_POS_X 62.0
 #define RESET_POS_Y 90.0
 #define RESET_POS_Z 33.0
-*/
 
-/* Resets for Warehouse box */
+/* Resets for Warehouse box 
 #define RESET_POS_X -8.0
 #define RESET_POS_Y 15.0
 #define RESET_POS_Z 2.0
+*/
 
 #define RESET_REQ_DURATION 2.0
 
@@ -37,6 +37,7 @@
 #define MAX_VELOCITY 3.0
 #define RUNNING_Z_PGAIN 0.5
 #define YAW_PGAIN 0.1
+#define YAW_PGAIN_RESET 1.0
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
                                                          _rate(freq){
@@ -119,7 +120,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             vel_msg.twist.linear.z = std::clamp( 1.0 * (RESET_POS_Z - _curr_pos.z), -10.0, 10.0 );
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
-            vel_msg.twist.angular.z = YAW_PGAIN * (0 - _yaw);
+            vel_msg.twist.angular.z = YAW_PGAIN_RESET * (0 - _yaw);
             _cmd_pub.publish(vel_msg);
             // ROS_INFO_STREAM("Resetting drone position");
 
@@ -253,10 +254,10 @@ void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
     _yaw = euler[2]; // map frame yaw angle
     // saturation to prevent ambiguity
-    if (_yaw < -MAX_HEADING) {
+    if (_yaw < -MAX_HEADING - PI/2) {
         _yaw += PI;
     }
-    if (_yaw > MAX_HEADING) {
+    if (_yaw > MAX_HEADING + PI/2) {
         _yaw -= PI;
     }
 }
@@ -289,9 +290,9 @@ void Navigator::run(){
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
             
-            ROS_INFO("cmd_velocity is %f\n", _cmd_velocity);
-            ROS_INFO("cur_heading is %f\n", _yaw);
-            ROS_INFO("-------------------");
+            // ROS_INFO("cmd_velocity is %f\n", _cmd_velocity);
+            // ROS_INFO("cur_heading is %f\n", _yaw);
+            // ROS_INFO("-------------------");
             vel_msg.twist.linear.x = _cmd_velocity * (-sin(_yaw));
             vel_msg.twist.linear.y = _cmd_velocity * cos(_yaw);
             vel_msg.twist.linear.z = RUNNING_Z_PGAIN * (RESET_POS_Z - _curr_pos.z);

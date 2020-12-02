@@ -108,6 +108,8 @@
       <remap from="flight_pilot/depth" to="camera/depth" />
     </node>
 
+    <node pkg="flightros" type="uncertainty_converter_node" name="uncertainty_converter_node" output="screen"/>
+
     <node pkg="joy" type="joy_node" name="joy_node">
       <param name="autorepeat_rate" value="10"/>
     </node>
@@ -129,7 +131,7 @@
      <param name="frame_id" type="string" value="world"/>
      <param name="base_frame_id" type="string" value="/hummingbird/base_link"/>
      <param name="resolution" value="0.1" />
-     <param name="sensor_model/max_range" value="12.0"/>
+     <param name="sensor_model/max_range" value="7.0"/>
      <param name="filter_ground" value="true"/>
      <param name="ground_filter/plane_distance" value="1"/>
      <remap from="cloud_in" to="hummingbird/point_cloud"/>

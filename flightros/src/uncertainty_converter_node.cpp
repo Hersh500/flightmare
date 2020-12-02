@@ -3,10 +3,11 @@
 
 #include <ros/ros.h>
 #include "flightros/flight_pilot.hpp"
+#include "flightros/uncertainty_converter.hpp"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "flight_pilot");
-  flightros::FlightPilot pilot(ros::NodeHandle(), ros::NodeHandle("~"));
+  ros::init(argc, argv, "uncertainty_converter");
+  flightros::UncertaintyConverter converter(ros::NodeHandle(), ros::NodeHandle("~"));
 
   // spin the ros
   ros::spin();
