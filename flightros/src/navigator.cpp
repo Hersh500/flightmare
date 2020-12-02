@@ -16,15 +16,16 @@
 #include <iostream>
 
 /* Resets for Forest */
+/*
 #define RESET_POS_X 62.0
 #define RESET_POS_Y 90.0
 #define RESET_POS_Z 33.0
+*/
 
-/* Resets for Warehouse box 
+/* Resets for Warehouse box  */
 #define RESET_POS_X -8.0
 #define RESET_POS_Y 15.0
 #define RESET_POS_Z 2.0
-*/
 
 #define RESET_REQ_DURATION 2.0
 

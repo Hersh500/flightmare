@@ -88,7 +88,14 @@ void UncertaintyConverter::mapCallback(const octomap_msgs::Octomap& msg) {
     for (; iter_x_og != iter_x_og.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_x_og, ++iter_y_og, ++iter_z_og) {
         Eigen::Vector3f world_pt(*iter_x_og, *iter_z_og, *iter_y_og);
         // TODO: constrain depth here if necessary
-        octomap::OcTreeNode *node = tree->search(*iter_x, *iter_y, *iter_z);
+        octomap::OcTreeNode *node;
+        try {
+            node = tree->search(*iter_x, *iter_y, *iter_z);
+        } catch (std::exception &e) {
+            ROS_ERROR("Error getting points from point cloud!");
+            return;
+        }
+
         // float occ_entropy = 0.5f;
         uint8_t occ_entropy = 255;
         if (node) {
