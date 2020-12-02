@@ -23,8 +23,8 @@ find_package(catkin REQUIRED COMPONENTS
     sensor_msgs
     tf_conversions
     tf
-#    octomap
-#    octomap_msgs
+    octomap_ros
+    octomap_msgs
 )
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
