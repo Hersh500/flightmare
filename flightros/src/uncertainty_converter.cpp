@@ -123,6 +123,7 @@ void UncertaintyConverter::mapCallback(const octomap_msgs::Octomap& msg) {
             // ROS_INFO("Out of bounds point! (%d, %d)", y, x);
         }
     }
+    delete tree;
     
     std_msgs::Header header;
     header.frame_id = "camera_pose";
