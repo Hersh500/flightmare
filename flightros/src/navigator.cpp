@@ -13,6 +13,7 @@
 #include <vector>
 #include <cmath>
 #include <ctgmath>
+#include <random>
 #include <iostream>
 
 /* Resets for Forest */
@@ -23,11 +24,12 @@
 */
 
 /* Resets for Warehouse box  */
-#define RESET_POS_X -8.0
+#define RESET_POS_X -9.0
 #define RESET_POS_Y 15.0
 #define RESET_POS_Z 2.0
 
 #define RESET_REQ_DURATION 2.0
+#define POS_STD 1.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
@@ -102,10 +104,17 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
     // ROS_INFO_STREAM(_cmd_heading);
     // ROS_INFO_STREAM(_cmd_velocity);
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine generator (seed);
+    std::normal_distribution<float> distribution(0.0, POS_STD);
+    x_mod = distribution(generator);
+    y_mod = distribution(generator);
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
 
+        x_mod = distribution(generator);
+        y_mod = distribution(generator);
         // blocking operation: move drone to reset position
         while ( true ){
 
@@ -116,8 +125,10 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
             geometry_msgs::TwistStamped vel_msg;
             vel_msg.header.stamp = ros::Time::now();
-            vel_msg.twist.linear.x = std::clamp( 1.0 * (RESET_POS_X - _curr_pos.x), -10.0, 10.0 );
-            vel_msg.twist.linear.y = std::clamp( 1.0 * (RESET_POS_Y - _curr_pos.y), -10.0, 10.0 );
+            // Reset to a random position
+            
+            vel_msg.twist.linear.x = std::clamp( 1.0 * (RESET_POS_X - _curr_pos.x - x_mod), -10.0, 10.0 );
+            vel_msg.twist.linear.y = std::clamp( 1.0 * (RESET_POS_Y - _curr_pos.y - y_mod), -10.0, 10.0 );
             vel_msg.twist.linear.z = std::clamp( 1.0 * (RESET_POS_Z - _curr_pos.z), -10.0, 10.0 );
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
@@ -125,7 +136,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             _cmd_pub.publish(vel_msg);
             // ROS_INFO_STREAM("Resetting drone position");
 
-            if ((std::pow(_curr_pos.x-RESET_POS_X, 2) + std::pow(_curr_pos.y-RESET_POS_Y, 2) + std::pow(_curr_pos.z-RESET_POS_Z, 2)) > 1.0){
+            if ((std::pow(_curr_pos.x + x_mod -RESET_POS_X, 2) + std::pow(_curr_pos.y + y_mod -RESET_POS_Y, 2) + std::pow(_curr_pos.z-RESET_POS_Z, 2)) > 1.0){
                 _not_reset = ros::Time::now();
             }
             else if (ros::Time::now() - _not_reset > ros::Duration(RESET_REQ_DURATION)){
@@ -197,8 +208,8 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         // collision || backwards || x too much || z too much
         std_msgs::Bool crash_msg;
         crash_msg.data = ( _in_collision.data ||
-                           _curr_pos.y < (RESET_POS_Y - 5.) ||
-                           ( _curr_pos.x > (RESET_POS_X + X_THRESHOLD) || _curr_pos.x < -(RESET_POS_X + X_THRESHOLD)) ||
+                           _curr_pos.y < (RESET_POS_Y + y_mod - 5.) ||
+                           ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < -(RESET_POS_X + x_mod + X_THRESHOLD)) ||
                            ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
         res.crash = crash_msg;
         
@@ -251,16 +262,20 @@ void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     _odom = *msg;
     _curr_pos = _odom.pose.pose.position;
     _curr_orient = _odom.pose.pose.orientation;
-    Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
-    auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-    _yaw = euler[2]; // map frame yaw angle
-    // saturation to prevent ambiguity
-    if (_yaw < -MAX_HEADING - PI/2) {
-        _yaw += PI;
+    // ROS_INFO("curr_orient.wxyz = (%f, %f, %f, %f)", _curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
+    _yaw = asin(2*_curr_orient.x*_curr_orient.y + 2*_curr_orient.z*_curr_orient.w);
+    /*
+    if (_curr_orient.w < 0) {
+        Eigen::Quaterniond q(-_curr_orient.w, -_curr_orient.x, -_curr_orient.y, -_curr_orient.z);
+        auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+        _yaw = euler[2]; // map frame yaw angle
+    } else {
+        Eigen::Quaterniond q(_curr_orient.w, _curr_orient.x, _curr_orient.y, _curr_orient.z);
+        auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+        _yaw = euler[2]; // map frame yaw angle
     }
-    if (_yaw > MAX_HEADING + PI/2) {
-        _yaw -= PI;
-    }
+    */
+//    ROS_INFO("Yaw est is %f\n", _yaw);
 }
 
 void Navigator::_camera_cb(const sensor_msgs::Image::ConstPtr& msg){

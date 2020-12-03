@@ -10,6 +10,7 @@
 #include <flightros/QuadState.h>
 #include <sensor_msgs/Image.h>
 
+#include <random>
 class Navigator{
 
     private:
@@ -59,6 +60,12 @@ class Navigator{
         geometry_msgs::Point _curr_pos, _goal_pos;
         geometry_msgs::Quaternion _curr_orient;
         double _yaw;
+        /*
+        std::default_random_engine generator;
+        std::normal_distribution<float> distribution(0.0f, 5.0f);
+        */
+        float x_mod;
+        float y_mod;
 
     public:
 
