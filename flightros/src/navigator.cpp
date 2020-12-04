@@ -29,7 +29,7 @@
 #define RESET_POS_Z 2.0
 
 #define RESET_REQ_DURATION 2.0
-#define POS_STD 2.0
+#define POS_STD 1.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
@@ -110,7 +110,8 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     std::default_random_engine generator (seed);
     std::normal_distribution<float> distribution(0.0, POS_STD);
     x_mod = distribution(generator);
-    y_mod = distribution(generator);
+    // y_mod = distribution(generator);
+    y_mod = 0.0;
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
@@ -181,6 +182,9 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "8UC4", outMat).toImageMsg();
             res.image = *rgbd_msg;
 
+            // Also set the uncertainty here
+            res.prob_image = _uncertainty;
+
             // mixChannels attempt
             // std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
             // cv::Mat outMat(sizes, CV_32FC4);
@@ -211,7 +215,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         std_msgs::Bool crash_msg;
         crash_msg.data = ( _in_collision.data ||
                            _curr_pos.y < (RESET_POS_Y + y_mod - 5.) ||
-                           ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < -(RESET_POS_X + x_mod + X_THRESHOLD)) ||
+                           ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < (RESET_POS_X + x_mod - X_THRESHOLD)) ||
                            ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
         if (_in_collision.data) {
             ROS_INFO("Collision with environment!");
@@ -238,6 +242,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             cv::merge(rgbd_channels, 4, outMat);
             sensor_msgs::ImagePtr rgbd_msg = cv_bridge::CvImage(_rgb.header, "8UC4", outMat).toImageMsg();
             res.image = *rgbd_msg;
+            res.prob_image = _uncertainty;
 
             // mixChannels attempt
             // std::vector<int> sizes{cv_ptr_rgb->image.rows, cv_ptr_rgb->image.cols};
