@@ -29,7 +29,8 @@
 #define RESET_POS_Z 2.0
 
 #define RESET_REQ_DURATION 2.0
-#define POS_STD 1.0
+#define X_POS_STD 2.0
+#define Y_POS_STD 1.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
@@ -108,16 +109,16 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     // ROS_INFO_STREAM(_cmd_velocity);
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator (seed);
-    std::normal_distribution<float> distribution(0.0, POS_STD);
-    x_mod = distribution(generator);
-    // y_mod = distribution(generator);
-    y_mod = 0.0;
+    std::normal_distribution<float> x_distribution(0.0, X_POS_STD);
+    std::normal_distribution<float> y_distribution(0.0, Y_POS_STD);
+    // x_mod = x_distribution(generator);
+    // y_mod = y_distribution(generator);
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
 
-        x_mod = distribution(generator);
-        y_mod = distribution(generator);
+        x_mod = x_distribution(generator);
+        y_mod = y_distribution(generator);
         // blocking operation: move drone to reset position
         while ( true ){
 
@@ -214,13 +215,20 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         // collision || backwards || x too much || z too much
         std_msgs::Bool crash_msg;
         crash_msg.data = ( _in_collision.data ||
-                           _curr_pos.y < (RESET_POS_Y + y_mod - 5.) ||
+                           _curr_pos.y < (RESET_POS_Y + y_mod - 5.0) ||
                            ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < (RESET_POS_X + x_mod - X_THRESHOLD)) ||
                            ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
         if (_in_collision.data) {
             ROS_INFO("Collision with environment!");
         } else if (crash_msg.data) {
-            ROS_INFO("out of bounds!");
+            if (_curr_pos.y < (RESET_POS_Y + y_mod - 5.0)) {
+                ROS_INFO("out of bounds in y!");
+            }
+            if (( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < (RESET_POS_X + x_mod - X_THRESHOLD))) {
+                ROS_INFO("out of bounds in x!");
+            } else {
+                ROS_INFO("out of bounds in z!");
+            }
         }
         res.crash = crash_msg;
         
