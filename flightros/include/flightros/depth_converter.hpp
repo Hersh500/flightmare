@@ -28,7 +28,8 @@ namespace flightros {
 
 class DepthConverter {
  public:
-  DepthConverter(const ros::NodeHandle& nh, const ros::NodeHandle& pnh);
+  DepthConverter(const ros::NodeHandle& nh,
+                 const ros::NodeHandle& pnh);
   ~DepthConverter(); 
   void depthCallback(const sensor_msgs::ImageConstPtr& depth_img);
   Eigen::Matrix3f K;
@@ -41,5 +42,6 @@ class DepthConverter {
 
   ros::Subscriber sub_depth;
   ros::Publisher cloud_pub;
+  image_transport::Publisher noisy_pub;
 };
 }

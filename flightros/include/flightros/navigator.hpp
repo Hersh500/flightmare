@@ -23,6 +23,7 @@ class Navigator{
         ros::Subscriber _odom_sub;
         ros::Subscriber _camera_sub;
         ros::Subscriber _depth_sub;
+        ros::Subscriber _uncertainty_sub;
         ros::Subscriber _collision_sub;
 
         // publishers
@@ -48,7 +49,8 @@ class Navigator{
         nav_msgs::Odometry _odom;
         void _camera_cb(const sensor_msgs::Image::ConstPtr& msg);
         void _depth_cb(const sensor_msgs::Image::ConstPtr& msg);
-        sensor_msgs::Image _rgb, _depth;
+        void _uncertainty_cb(const sensor_msgs::Image::ConstPtr& msg);
+        sensor_msgs::Image _rgb, _depth, _uncertainty;
         void _collision_cb(const std_msgs::Bool::ConstPtr& msg);
         std_msgs::Bool _in_collision;
 

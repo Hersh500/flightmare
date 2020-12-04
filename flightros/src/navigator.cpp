@@ -29,7 +29,7 @@
 #define RESET_POS_Z 2.0
 
 #define RESET_REQ_DURATION 2.0
-#define POS_STD 1.0
+#define POS_STD 2.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
@@ -73,7 +73,9 @@ void Navigator::initializeSubscribers(){
     _camera_sub = _nh.subscribe
         ("hummingbird/camera/image", 10, &Navigator::_camera_cb, this);
     _depth_sub = _nh.subscribe
-        ("hummingbird/camera/depth", 10, &Navigator::_depth_cb, this);
+        ("hummingbird/camera/noisy_depth", 10, &Navigator::_depth_cb, this);
+    _uncertainty_sub = _nh.subscribe
+        ("hummingbird/camera/uncertainty", 10, &Navigator::_uncertainty_cb, this);
     _collision_sub = _nh.subscribe
         ("hummingbird/collision", 10, &Navigator::_collision_cb, this);
 }
@@ -211,6 +213,11 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
                            _curr_pos.y < (RESET_POS_Y + y_mod - 5.) ||
                            ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < -(RESET_POS_X + x_mod + X_THRESHOLD)) ||
                            ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
+        if (_in_collision.data) {
+            ROS_INFO("Collision with environment!");
+        } else if (crash_msg.data) {
+            ROS_INFO("out of bounds!");
+        }
         res.crash = crash_msg;
         
         cv_bridge::CvImagePtr cv_ptr_rgb, cv_ptr_depth;
@@ -276,6 +283,11 @@ void Navigator::_odom_cb(const nav_msgs::Odometry::ConstPtr& msg){
     }
     */
 //    ROS_INFO("Yaw est is %f\n", _yaw);
+}
+
+void Navigator::_uncertainty_cb(const sensor_msgs::Image::ConstPtr& msg){
+    _uncertainty = *msg;
+    _uncertainty.header.stamp = ros::Time::now();
 }
 
 void Navigator::_camera_cb(const sensor_msgs::Image::ConstPtr& msg){
