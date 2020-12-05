@@ -15,6 +15,7 @@
 #include <ctgmath>
 #include <random>
 #include <iostream>
+#include <std_srvs/Empty.h>
 
 /* Resets for Forest */
 /*
@@ -88,7 +89,7 @@ void Navigator::initializePublishers(){
 
 void Navigator::initializeServices(){
     _quadstate_server = _nh.advertiseService("navigator/get_state", &Navigator::_quadstate_cb, this);
-    // _client = _nh.serviceClient<flightros::QuadState>("learner/get_state");
+    _octomap_reset_client = _nh.serviceClient<std_srvs::Empty>("/octomap_server/reset");
 }
 
 /* ---------------------------------- */
@@ -116,6 +117,13 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
+
+        // request octomap reset
+        std_srvs::Empty empty_srv;
+        if (_octomap_reset_client.call(empty_srv))
+            ROS_INFO_STREAM("Successfully called octomap reset");
+        else
+            ROS_ERROR("Failed to call service /octomap_server/reset");
 
         x_mod = x_distribution(generator);
         y_mod = y_distribution(generator);
