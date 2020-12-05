@@ -31,8 +31,7 @@ class Navigator{
 
         // services
         ros::ServiceServer _quadstate_server;
-        // ros::ServiceClient _client;
-        // flightros::QuadState _quadstate_srv;
+        ros::ServiceClient _octomap_reset_client;
 
         // service callback functions
         bool _quadstate_cb(flightros::QuadState::Request  &req,
