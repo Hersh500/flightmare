@@ -30,18 +30,20 @@
 #define RESET_POS_Z 2.0
 
 #define RESET_REQ_DURATION 2.0
-#define X_POS_STD 2.0
+
+#define PI 3.14159
+#define X_POS_STD 0.5
 #define Y_POS_STD 1.0
+#define YAW_STD PI/24.0
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
 #define X_THRESHOLD 20.0
 #define Z_THRESHOLD 1.5
-#define PI 3.14159
 #define MAX_HEADING PI/4.0 // +/- PI/4 = +/- 45 deg
 #define MAX_VELOCITY 3.0
 #define RUNNING_Z_PGAIN 0.5
-#define YAW_PGAIN 0.1
+#define YAW_PGAIN 0.3
 #define YAW_PGAIN_RESET 1.0
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
@@ -112,11 +114,20 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
     std::default_random_engine generator (seed);
     std::normal_distribution<float> x_distribution(0.0, X_POS_STD);
     std::normal_distribution<float> y_distribution(0.0, Y_POS_STD);
-    // x_mod = x_distribution(generator);
-    // y_mod = y_distribution(generator);
+    std::normal_distribution<float> yaw_distribution(0.0, YAW_STD);
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
+
+        /*  RANDOMIZED STARTING POSITIOn */
+        // x_mod = x_distribution(generator);
+        // y_mod = y_distribution(generator);
+        // float yaw_mod = yaw_distribution(generator);
+        x_mod = 0.0;
+        y_mod = 0.0;
+        float yaw_mod = 0.0;
+        _goal_pos.y = RESET_POS_Y + y_mod + GOAL_POSITION_Y;
+        
 
         // request octomap reset
         std_srvs::Empty empty_srv;
@@ -125,8 +136,6 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         else
             ROS_ERROR("Failed to call service /octomap_server/reset");
 
-        x_mod = x_distribution(generator);
-        y_mod = y_distribution(generator);
         // blocking operation: move drone to reset position
         while ( true ){
 
@@ -144,7 +153,7 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             vel_msg.twist.linear.z = std::clamp( 1.0 * (RESET_POS_Z - _curr_pos.z), -10.0, 10.0 );
             vel_msg.twist.angular.x = 0;
             vel_msg.twist.angular.y = 0;
-            vel_msg.twist.angular.z = YAW_PGAIN_RESET * (0 - _yaw);
+            vel_msg.twist.angular.z = YAW_PGAIN_RESET * (yaw_mod - _yaw);
             _cmd_pub.publish(vel_msg);
             // ROS_INFO_STREAM("Resetting drone position");
 

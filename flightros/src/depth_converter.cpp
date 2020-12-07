@@ -11,11 +11,12 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 
-/*
 // Noisy params 1 - medium lookahead
+/*
 #define NOISE_STD_ 10.0
 #define MAX_DEPTH_IN_PCL_ 7.5
-
+*/
+/*
 // Noisy params 2 - short lookahead
 #define NOISE_STD_ 10.0
 #define MAX_DEPTH_IN_PCL_ 6.5
