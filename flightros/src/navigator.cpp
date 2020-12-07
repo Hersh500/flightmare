@@ -225,7 +225,9 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
         crash_msg.data = ( _in_collision.data ||
                            _curr_pos.y < (RESET_POS_Y + y_mod - 5.0) ||
                            ( _curr_pos.x > (RESET_POS_X + x_mod + X_THRESHOLD) || _curr_pos.x < (RESET_POS_X + x_mod - X_THRESHOLD)) ||
-                           ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) );
+                           ( _curr_pos.z < RESET_POS_Z - Z_THRESHOLD || _curr_pos.z > RESET_POS_Z + Z_THRESHOLD) ||
+                           // manually checking for approximate collision with box in WAREHOUSE
+                           (_curr_pos.x < -7.2 && _curr_pos.x > -10.5 && _curr_pos.y > 19.0 && _curr_pos.y < 23.0));
         if (_in_collision.data) {
             ROS_INFO("Collision with environment!");
         } else if (crash_msg.data) {
