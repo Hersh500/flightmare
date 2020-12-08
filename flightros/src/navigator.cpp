@@ -25,7 +25,7 @@
 */
 
 /* Resets for Warehouse box  */
-#define RESET_POS_X -9.0
+#define RESET_POS_X -8.0
 #define RESET_POS_Y 15.0
 #define RESET_POS_Z 2.0
 
@@ -35,6 +35,7 @@
 #define X_POS_STD 0.5
 #define Y_POS_STD 1.0
 #define YAW_STD PI/24.0
+#define USE_RANDOM true
 
 #define TIME_HORIZON 0.5
 #define GOAL_POSITION_Y 20.0
@@ -43,7 +44,7 @@
 #define MAX_HEADING PI/4.0 // +/- PI/4 = +/- 45 deg
 #define MAX_VELOCITY 3.0
 #define RUNNING_Z_PGAIN 0.5
-#define YAW_PGAIN 0.3
+#define YAW_PGAIN 1.0
 #define YAW_PGAIN_RESET 1.0
 
 Navigator::Navigator(ros::NodeHandle* nh, double freq) : _nh(*nh), 
@@ -118,23 +119,24 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
 
     if (req.in[0] == '0'){
         ROS_WARN("QuadState service: Resetting simulation");
+        ROS_INFO("QuadState service: Resetting simulation");
+        float yaw_mod;
 
         /*  RANDOMIZED STARTING POSITIOn */
-        // x_mod = x_distribution(generator);
-        // y_mod = y_distribution(generator);
-        // float yaw_mod = yaw_distribution(generator);
-        x_mod = 0.0;
-        y_mod = 0.0;
-        float yaw_mod = 0.0;
+        if (USE_RANDOM) {
+            ROS_INFO("Resetting to random position...");
+            x_mod = x_distribution(generator);
+            y_mod = y_distribution(generator);
+            yaw_mod = yaw_distribution(generator);
+        } else {
+            x_mod = 0.0;
+            y_mod = 0.0;
+            yaw_mod = 0.0;
+        }
+
         _goal_pos.y = RESET_POS_Y + y_mod + GOAL_POSITION_Y;
         
 
-        // request octomap reset
-        std_srvs::Empty empty_srv;
-        if (_octomap_reset_client.call(empty_srv))
-            ROS_INFO_STREAM("Successfully called octomap reset");
-        else
-            ROS_ERROR("Failed to call service /octomap_server/reset");
 
         // blocking operation: move drone to reset position
         while ( true ){
@@ -170,6 +172,13 @@ bool Navigator::_quadstate_cb(flightros::QuadState::Request &req,
             _rate.sleep();
 
         }
+
+        // request octomap reset
+        std_srvs::Empty empty_srv;
+        if (_octomap_reset_client.call(empty_srv))
+            ROS_INFO_STREAM("Successfully called octomap reset");
+        else
+            ROS_ERROR("Failed to call service /octomap_server/reset");
 
         // fill relevant fields
         res.header = _rgb.header;

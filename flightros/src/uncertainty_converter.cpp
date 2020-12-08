@@ -79,7 +79,7 @@ void UncertaintyConverter::mapCallback(const octomap_msgs::Octomap& msg) {
     sensor_msgs::PointCloud2Iterator<float> iter_z_og(pcl_msg, "z");
 
     // TODO: might need to convert this to 8U
-    cv::Mat u_image = cv::Mat::ones(FlightPilot::im_height, FlightPilot::im_width, CV_8UC1) * 128;
+    cv::Mat u_image = cv::Mat::ones(FlightPilot::im_height, FlightPilot::im_width, CV_8UC1) * 255;
 
     float d = FlightPilot::depth_scale/100.0f;
 

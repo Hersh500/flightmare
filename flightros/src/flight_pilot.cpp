@@ -136,7 +136,7 @@ void FlightPilot::mainLoopCallback(const ros::TimerEvent &event) {
     // Seems like the collision flag is broken. 
     // Instead can use a circular buffer on the minimum depth value in the image for like 5 consecutive images.
 
-    if (min_depth < 40) {
+    if (min_depth < 50) {
         num_min_depths_past_threshold++;
     } else {
         num_min_depths_past_threshold = 0;

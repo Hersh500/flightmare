@@ -67,6 +67,7 @@ class Navigator{
         */
         float x_mod;
         float y_mod;
+        float episode_avg_velocity;
 
     public:
 

@@ -16,10 +16,10 @@
 #define NOISE_STD_ 10.0
 #define MAX_DEPTH_IN_PCL_ 7.5
 */
-/*
 // Noisy params 2 - short lookahead
+/*
 #define NOISE_STD_ 10.0
-#define MAX_DEPTH_IN_PCL_ 6.5
+#define MAX_DEPTH_IN_PCL_ 6.9
 */
 
 // Noise-free params
