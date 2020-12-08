@@ -40,18 +40,26 @@ class UncertaintyConverter {
    // Need to deserialize this message
    // see: https://github.com/OctoMap/octomap_msgs/blob/melodic-devel/include/octomap_msgs/conversions.h
    void mapCallback(const octomap_msgs::Octomap& msg);
+   void mapCallback2(const octomap_msgs::Octomap& msg);
+   void depthCallback(const sensor_msgs::ImageConstPtr& msg);
    // Use K matrix to convert from point cloud to pixel coords.
    void pcCallback(const sensor_msgs::PointCloud2ConstPtr& msg);
+
    Eigen::Matrix3f K;
+   Eigen::Matrix3f invK;
+
  private:
   int first = 0;
   bool got_pcl = false;
+  bool got_depth = false;
   ros::NodeHandle nh_; 
   ros::NodeHandle pnh_; 
   tf::TransformListener listener;
 
   sensor_msgs::PointCloud2 pcl_msg;
+  sensor_msgs::Image _depth_img;
   ros::Subscriber sub_map;
+  ros::Subscriber sub_depth;
   ros::Subscriber sub_pcl;
   image_transport::Publisher uncertainty_pub;
 };

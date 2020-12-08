@@ -10,22 +10,6 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-
-// Noisy params 1 - medium lookahead
-/*
-#define NOISE_STD_ 10.0
-#define MAX_DEPTH_IN_PCL_ 7.5
-*/
-// Noisy params 2 - short lookahead
-/*
-#define NOISE_STD_ 10.0
-#define MAX_DEPTH_IN_PCL_ 6.9
-*/
-
-// Noise-free params
-#define NOISE_STD_ 0.0
-#define MAX_DEPTH_IN_PCL_ 20
-
 namespace flightros { 
 
 DepthConverter::DepthConverter(const ros::NodeHandle &nh, 
@@ -84,19 +68,20 @@ void DepthConverter::depthCallback(const sensor_msgs::ImageConstPtr& depth_img) 
             }
             if (id != 0) {
                 float d = FlightPilot::depth_scale/100.0 * id;
-                if (d < MAX_DEPTH_IN_PCL_) {
-                    Eigen::Vector3f image_point((j + width_factor) * d, (-i + height_factor) * d, d);
-                    Eigen::Vector3f camera_point = invK * image_point;
-                    points.push_back(camera_point.x());
-                    // switching between z and y here, since image rows = world frame z.
-                    points.push_back(camera_point.z());
-                    points.push_back(camera_point.y());
-                } else {
+            //     if (d < MAX_DEPTH_IN_PCL_) {
+                Eigen::Vector3f image_point((j + width_factor) * d, (-i + height_factor) * d, d);
+                Eigen::Vector3f camera_point = invK * image_point;
+                points.push_back(camera_point.x());
+                // switching between z and y here, since image rows = world frame z.
+                points.push_back(camera_point.z());
+                points.push_back(camera_point.y());
+                if (d > MAX_DEPTH_IN_PCL_) {
                     img->image.at<uint8_t>(i, j) = 200.0; // set it to some far away depth, ie. unknown
                 }
             }
         }
     }
+
     // ROS_INFO("minimum depth_value = %d\n", min_d);
     noisy_pub.publish(img->toImageMsg());
     

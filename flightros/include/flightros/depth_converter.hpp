@@ -21,6 +21,21 @@
 #include "flightlib/objects/quadrotor.hpp"
 #include "flightlib/sensors/rgb_camera.hpp"
 
+// Noisy params 1 - medium lookahead
+/*
+#define NOISE_STD_ 10.0
+#define MAX_DEPTH_IN_PCL_ 7.5
+*/
+// Noisy params 2 - short lookahead
+#define NOISE_STD_ 10.0
+#define MAX_DEPTH_IN_PCL_ 6.9
+
+// Noise-free params
+/*
+#define NOISE_STD_ 0.0
+#define MAX_DEPTH_IN_PCL_ 20
+*/
+
 
 using namespace flightlib;
 
